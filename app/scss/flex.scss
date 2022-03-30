@@ -1,0 +1,50 @@
+/****************** Flex Start ******************/
+.flex {
+  display: flex;
+  flex-wrap: nowrap;
+}
+.flex > * {
+  flex: 0 1 auto;
+}
+.flex-row {
+  flex-direction: row;
+}
+.flex-row-reverse {
+  flex-direction: row-reverse;
+}
+.flex-column {
+  flex-direction: column;
+}
+.flex-column-reverse {
+  flex-direction: column-reverse;
+}
+.flex-start {
+  justify-content: flex-start;
+}
+.flex-end {
+  justify-content: flex-end;
+}
+.flex-center {
+  justify-content: center;
+}
+.flex-between {
+  justify-content: space-between;
+}
+.flex-around {
+  justify-content: space-around;
+}
+.flex-align-start {
+  align-content: flex-start;
+}
+.flex-align-end {
+  align-content: flex-end;
+}
+.flex-align-center {
+  align-content: center;
+}
+@each $size in 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 {
+  .flex-#{$size} {
+    flex-grow: $size;
+  }
+}
+/****************** Flex End ******************/

@@ -1,0 +1,6 @@
+{
+  "cSpell.words": ["dayjs", "dunita", "eqeqeq", "fastify", "Fgxt", "onbeforeupdate", "oncleanup", "oncreate", "onremove"],
+  "prettier.trailingComma": "none",
+  "prettier.printWidth": 120,
+  "svg.preview.background": "white"
+}

@@ -1,0 +1,43 @@
+{
+  "name": "io.cordova.hellocordova",
+  "displayName": "HelloCordova",
+  "version": "1.0.0",
+  "description": "A sample Apache Cordova application that responds to the deviceready event.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "run-all 'npm run dev:sass' 'npm run dev:build'",
+    "dev:build": "nodemon -e js,jsx,ts,tsx,css -w app -w www/css -w build.js build.js",
+    "dev:sass": "nodemon -e scss -w ./scss build-sass.js"
+  },
+  "keywords": [
+    "ecosystem:cordova"
+  ],
+  "author": "Apache Cordova Team",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.16.0",
+    "@typescript-eslint/parser": "^5.16.0",
+    "dayjs": "^1.11.0",
+    "dragonglass": "^1.0.2",
+    "eslint": "^8.12.0",
+    "eslint-plugin-sonarjs": "^0.12.0",
+    "nodemon": "^2.0.15",
+    "run-all": "^1.0.1",
+    "sass": "^1.49.9",
+    "ts-node": "^10.7.0",
+    "tsc-prog": "^2.2.1",
+    "typescript": "^4.6.3",
+    "valyrian.js": "^6.0.7"
+  },
+  "cordova": {
+    "platforms": [
+      "browser",
+      "android"
+    ],
+    "plugins": {
+      "cordova-plugin-browsersync-gen2": {}
+    }
+  },
+  "dependencies": {}
+}

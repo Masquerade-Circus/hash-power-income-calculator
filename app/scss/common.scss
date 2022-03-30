@@ -1,0 +1,85 @@
+fieldset,
+[data-card] > *,
+dialog > * {
+  background-color: inherit;
+}
+
+.bg-info-dark {
+  color: var(--info);
+}
+
+.bg-info-dark > footer:last-child {
+  border-top: 0.06em solid var(--info-darkest);
+}
+
+.bg-info-dark > header:first-child {
+  border-bottom: 0.06em solid var(--info-darkest);
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.h-100 {
+  height: 100%;
+}
+
+table td,
+table th {
+  border-right: 1px solid var(--default-lightest);
+  padding: 0.5em 0.75em;
+}
+
+table td:last-child,
+table th:last-child {
+  border-right: 0;
+}
+
+table tr {
+  border-bottom: 1px solid var(--default-lightest);
+}
+table tr:last-child {
+  border-bottom: 0;
+}
+
+.squared {
+  margin: 0;
+  border-radius: 0;
+  min-height: 4rem;
+  min-width: auto;
+}
+
+table.scrollable {
+  display: block;
+  width: 100%;
+}
+
+table.scrollable > tbody {
+  display: block;
+  overflow: auto;
+  overflow-y: scroll;
+  height: 100%;
+}
+
+.overflow-auto {
+  overflow: auto;
+}
+
+.u-p-0 {
+  padding: 0;
+}
+.u-m-0 {
+  margin: 0;
+}
+
+[data-trigger] > summary.w-100 {
+  width: 100%;
+}
+
+fieldset.no-helper {
+  margin-bottom: 0;
+}
+
+summary.bg-info {
+  background-color: var(--info);
+}

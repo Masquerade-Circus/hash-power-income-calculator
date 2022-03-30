@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "jsx": "preserve",
+    "target": "ES2021",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "jsxFactory": "v",
+    "jsxFragmentFactory": "v.factory"
+  },
+  "include": ["app/**/*", "server/**/*"]
+}
