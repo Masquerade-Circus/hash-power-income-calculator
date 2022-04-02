@@ -8,7 +8,7 @@ import sanitizeObjectUtil from "./sanitize-object-util";
 class BaseClass<T> {
   readonly value: T;
 
-  constructor(value: T) {
+  constructor(value: unknown) {
     this.value = this.validate(value);
   }
 
@@ -24,7 +24,10 @@ class BaseClass<T> {
     return sanitizeObjectUtil(JSON.parse(JSON.stringify(this.value)), sanitize, keep) as T;
   }
 
-  static create(value: unknown, ...args: unknown[]): Result<unknown, LogicError> | Promise<Result<unknown, LogicError>> {
+  static create(
+    value: unknown,
+    ...args: unknown[]
+  ): Result<unknown, LogicError> | Promise<Result<unknown, LogicError>> {
     return err(new LogicError("Method not implemented"));
   }
 }
