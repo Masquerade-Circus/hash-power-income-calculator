@@ -1,6 +1,13 @@
+import { BtcSVG } from "./btc.svg";
+import { DashSVG } from "./dash.svg";
+import { EtcSVG } from "./etc.svg";
+import { EthSVG } from "./eth.svg";
+import { LtcSVG } from "./ltc.svg";
 // We will create a hash power calculator for cryptocurrencies and mining hardward.
 // We will use the coingecko-api and minerstats-api.
 import Request from "valyrian.js/plugins/request.js";
+import { XmrSVG } from "./xmr.svg";
+import { ZecSVG } from "./zec.svg";
 import { storageService } from "../common/storage-service";
 
 const CoinGeckoRequest = Request.new("https://api.coingecko.com/api/v3", {
@@ -12,8 +19,11 @@ const MinerstatRequest = Request.new("https://api.minerstat.com/v2/coins", {
 });
 
 const OneDayInMilliSeconds = 1000 * 60 * 60 * 24;
+const ThirtyMinutesInMilliSeconds = 1000 * 60 * 30;
 
-enum AlgorithmsEnum {
+const DefaultCacheTime = ThirtyMinutesInMilliSeconds;
+
+export enum AlgorithmsEnum {
   "SHA-256" = "SHA-256",
   "Scrypt" = "Scrypt",
   "Ethash" = "Ethash",
@@ -23,7 +33,7 @@ enum AlgorithmsEnum {
   "X11" = "X11"
 }
 
-enum CoinEnum {
+export enum CoinSymbolEnum {
   "BTC" = "BTC",
   "ETH" = "ETH",
   "ETC" = "ETC",
@@ -45,7 +55,7 @@ enum CoinNamesEnum {
 
 interface CoinInterface {
   algorithm: AlgorithmsEnum;
-  coin: CoinEnum;
+  coin: CoinSymbolEnum;
   name: CoinNamesEnum;
   network_hashrate: number;
   price: number;
@@ -53,14 +63,16 @@ interface CoinInterface {
   updated: number;
 }
 
-interface CalculationResult {
+export interface CalculationResult {
   mined: number;
+  minedFee: number;
   income: number;
+  incomeFee: number;
   powerCost: number;
   profit: number;
 }
 
-interface CalculationsResult {
+export interface CalculationsResult {
   daily: CalculationResult;
   weekly: CalculationResult;
   monthly: CalculationResult;
@@ -70,30 +82,109 @@ interface CalculationsResult {
 }
 
 export const CryptoCurrencies = {
-  BTC: { id: "bitcoin", symbol: "btc", name: "Bitcoin" },
-  ETH: { id: "ethereum", symbol: "eth", name: "Ethereum" },
-  ETC: { id: "ethereum-classic", symbol: "etc", name: "Ethereum Classic" },
-  XMR: { id: "monero", symbol: "xmr", name: "Monero" },
-  ZEC: { id: "zcash", symbol: "zec", name: "Zcash" },
-  DASH: { id: "dash", symbol: "dash", name: "Dash" },
-  LTC: { id: "litecoin", symbol: "ltc", name: "Litecoin" }
+  BTC: {
+    id: "bitcoin",
+    symbol: "BTC",
+    name: "Bitcoin",
+    icon: BtcSVG(),
+    config: {
+      hashRateAmount: 40,
+      hashRateType: "Th/s",
+      power: 2600
+    }
+  },
+  ETH: {
+    id: "ethereum",
+    symbol: "ETH",
+    name: "Ethereum",
+    icon: EthSVG(),
+    config: {
+      hashRateAmount: 200,
+      hashRateType: "Mh/s",
+      power: 140
+    }
+  },
+  ETC: {
+    id: "ethereum-classic",
+    symbol: "ETC",
+    name: "Ethereum Classic",
+    icon: EtcSVG(),
+    config: {
+      hashRateAmount: 500,
+      hashRateType: "Mh/s",
+      power: 1000
+    }
+  },
+  XMR: {
+    id: "monero",
+    symbol: "XMR",
+    name: "Monero",
+    icon: XmrSVG(),
+    config: {
+      hashRateAmount: 100,
+      hashRateType: "Kh/s",
+      power: 1200
+    }
+  },
+  ZEC: {
+    id: "zcash",
+    symbol: "ZEC",
+    name: "Zcash",
+    icon: ZecSVG(),
+    config: {
+      hashRateAmount: 100,
+      hashRateType: "Kh/s",
+      power: 1000
+    }
+  },
+  DASH: {
+    id: "dash",
+    symbol: "DASH",
+    name: "Dash",
+    icon: DashSVG(),
+    config: {
+      hashRateAmount: 200,
+      hashRateType: "Gh/s",
+      power: 1110
+    }
+  },
+  LTC: {
+    id: "litecoin",
+    symbol: "LTC",
+    name: "Litecoin",
+    icon: LtcSVG(),
+    config: {
+      hashRateAmount: 5,
+      hashRateType: "Gh/s",
+      power: 1000
+    }
+  }
 };
 
 const CryptoCurrenciesIds = ["bitcoin", "ethereum", "ethereum-classic", "monero", "zcash", "dash", "litecoin"];
 
 export enum CurrencyEnum {
-  "usd" = "usd",
-  "eur" = "eur",
-  "gbp" = "gbp",
-  "cad" = "cad",
-  "aud" = "aud",
-  "chf" = "chf",
-  "cny" = "cny",
-  "rub" = "rub",
-  "brl" = "brl",
-  "hkd" = "hkd",
-  "jpy" = "jpy",
-  "mxn" = "mxn"
+  "USD" = "USD",
+  "EUR" = "EUR",
+  "GBP" = "GBP",
+  "CAD" = "CAD",
+  "AUD" = "AUD",
+  "CHF" = "CHF",
+  "CNY" = "CNY",
+  "RUB" = "RUB",
+  "BRL" = "BRL",
+  "HKD" = "HKD",
+  "JPY" = "JPY",
+  "MXN" = "MXN"
+}
+
+export enum HashRateStringToNumber {
+  "Ph/s" = 1000000000000000,
+  "Th/s" = 1000000000000,
+  "Gh/s" = 1000000000,
+  "Mh/s" = 1000000,
+  "Kh/s" = 1000,
+  "H/s" = 1
 }
 
 export class CalculatorService {
@@ -102,7 +193,7 @@ export class CalculatorService {
     let cache = storageService.get(path);
     if (cache) {
       let cacheDate = cache.date;
-      if (dateNow - cacheDate < OneDayInMilliSeconds) {
+      if (dateNow - cacheDate < DefaultCacheTime) {
         return true;
       }
     }
@@ -151,7 +242,9 @@ export class CalculatorService {
     }
     const response = await CoinGeckoRequest.get("/simple/price", {
       ids: CryptoCurrenciesIds.join(","),
-      vs_currencies: Object.keys(CurrencyEnum).join(",")
+      vs_currencies: Object.keys(CurrencyEnum)
+        .map((key) => key.toLowerCase())
+        .join(",")
     });
     this.setCache("prices", response);
     return response;
@@ -162,26 +255,33 @@ export class CalculatorService {
       return storageService.get("coinsData.value");
     }
     const response = await MinerstatRequest.get("/", {
-      list: Object.keys(CoinEnum).join(",")
+      list: Object.keys(CoinSymbolEnum).join(",")
     });
     this.setCache("coinsData", response);
     return response;
   }
 
-  async calculateConForHashRate({
-    coinName,
+  getHashRateFromString(hashRateString: HashRateStringToNumber, amount: number) {
+    const hashRate = amount * Number(HashRateStringToNumber[hashRateString]);
+    return hashRate;
+  }
+
+  async calculateCoinForHashRate({
+    coinSymbol,
     hashRate,
     power,
     powerCost,
     currency,
-    algorithm
+    algorithm,
+    poolFee
   }: {
-    coinName: CoinEnum;
+    coinSymbol: CoinSymbolEnum;
     hashRate: number;
     power: number;
     powerCost: number;
     currency: string;
-    algorithm: AlgorithmsEnum;
+    algorithm?: AlgorithmsEnum;
+    poolFee: number;
   }): Promise<CalculationsResult> {
     let coins = await this.getCoinsData();
     let pricesForAllCoins = await this.getPrices();
@@ -190,48 +290,62 @@ export class CalculatorService {
       throw new Error("Could not load data");
     }
 
-    let coin = coins.find((coin) => coin.coin === coinName);
+    let coin = coins.find((coin) => coin.coin === coinSymbol);
 
-    if (!coin || !CryptoCurrencies[coinName] || !pricesForAllCoins[CryptoCurrencies[coinName].id]) {
+    if (!coin || !CryptoCurrencies[coinSymbol] || !pricesForAllCoins[CryptoCurrencies[coinSymbol].id]) {
       throw new Error("Coin not found");
     }
 
-    if (coin.algorithm !== algorithm) {
+    if (algorithm && coin.algorithm !== algorithm) {
       throw new Error("Algorithm not supported");
     }
 
+    let currencyLowerCased = (currency || "usd").toLowerCase();
+
     let price =
-      pricesForAllCoins[CryptoCurrencies[coinName].id][currency] ||
-      pricesForAllCoins[CryptoCurrencies[coinName].id].usd;
+      pricesForAllCoins[CryptoCurrencies[coinSymbol].id][currencyLowerCased] ||
+      pricesForAllCoins[CryptoCurrencies[coinSymbol].id].usd;
 
     const reward = coin.reward * hashRate;
-    const dailyMined = reward * 24;
+    const fee = reward * poolFee;
+    const rewardWithoutFee = reward - fee;
+    const dailyMined = rewardWithoutFee * 24;
+    const dailyMinedFee = fee * 24;
     const dailyIncome = dailyMined * price;
+    const dailyIncomeFee = dailyMinedFee * price;
     const dailyPowerCost = (powerCost / 1000) * power * 24;
     const dailyProfit = dailyIncome - dailyPowerCost;
 
     return {
       daily: {
         mined: dailyMined,
+        minedFee: dailyMinedFee,
         income: dailyIncome,
+        incomeFee: dailyIncomeFee,
         powerCost: dailyPowerCost,
         profit: dailyProfit
       },
       weekly: {
         mined: dailyMined * 7,
+        minedFee: dailyMinedFee * 7,
         income: dailyIncome * 7,
+        incomeFee: dailyIncomeFee * 7,
         powerCost: dailyPowerCost * 7,
         profit: dailyProfit * 7
       },
       monthly: {
         mined: dailyMined * 30,
+        minedFee: dailyMinedFee * 30,
         income: dailyIncome * 30,
+        incomeFee: dailyIncomeFee * 30,
         powerCost: dailyPowerCost * 30,
         profit: dailyProfit * 30
       },
       yearly: {
         mined: dailyMined * 365,
+        minedFee: dailyMinedFee * 365,
         income: dailyIncome * 365,
+        incomeFee: dailyIncomeFee * 365,
         powerCost: dailyPowerCost * 365,
         profit: dailyProfit * 365
       },
@@ -240,18 +354,3 @@ export class CalculatorService {
     };
   }
 }
-
-async function main() {
-  const calculatorService = new CalculatorService();
-  let results = await calculatorService.calculateConForHashRate({
-    coinName: CoinEnum.ETH,
-    hashRate: 3000000000,
-    power: 2600,
-    powerCost: 0.1,
-    currency: "usd",
-    algorithm: AlgorithmsEnum.Ethash
-  });
-  console.log(results);
-}
-
-main();

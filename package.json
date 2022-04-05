@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "run-all 'npm run dev:sass' 'npm run dev:build'",
     "dev:build": "nodemon -e js,jsx,ts,tsx,css -w app -w www/css -w build.js build.js",
-    "dev:sass": "nodemon -e scss -w ./scss build-sass.js"
+    "dev:sass": "nodemon -e scss -w ./app/scss build-sass.js"
   },
   "keywords": [
     "ecosystem:cordova"
@@ -40,5 +40,8 @@
     "plugins": {
       "cordova-plugin-browsersync-gen2": {}
     }
+  },
+  "dependencies": {
+    "modern-css-reset": "^1.4.0"
   }
 }

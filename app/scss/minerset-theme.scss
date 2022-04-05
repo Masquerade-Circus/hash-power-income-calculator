@@ -1,0 +1,218 @@
+:root {
+  --e-global-color-primary: #50307f;
+  --e-global-color-secondary: #45a78f;
+  --e-global-color-text: #515151;
+  --e-global-color-accent: #000000;
+  --e-global-color-f3ef767: #ab9eaf;
+  --e-global-color-2d55c0d: #eaeaea;
+  --e-global-color-31a96fa: #361c3d;
+  --e-global-color-969faf7: #583d5f;
+  --e-global-color-f2824ce: #eaeaea;
+  --e-global-color-73ff9b0: #f7f7f7;
+  --e-global-color-a42dffc: #8d4e9d;
+  --e-global-color-feaf3eb: #c99aff;
+  --e-global-color-95795c9: #000000;
+  --e-global-color-b2a5b7b: #ffffff;
+  --e-global-color-98153fa: #191e25;
+  --e-global-typography-primary-font-family: "Montserrat";
+  --e-global-typography-primary-font-weight: 600;
+  --e-global-typography-secondary-font-family: "Montserrat";
+  --e-global-typography-secondary-font-weight: 400;
+  --e-global-typography-text-font-family: "Montserrat";
+  --e-global-typography-text-font-weight: 400;
+  --e-global-typography-accent-font-family: "Montserrat";
+  --e-global-typography-accent-font-weight: 500;
+  color: #515151;
+  font-family: "Work Sans", sans-serif;
+  font-size: 22px;
+  font-weight: 200;
+  line-height: 26px;
+  background-color: var(--e-global-color-98153fa);
+}
+
+html,
+body {
+  background-color: var(--e-global-color-95795c9);
+  min-width: 620px;
+  max-width: 100%;
+  color: var(--e-global-color-f2824ce);
+}
+
+html {
+  height: auto;
+}
+
+body {
+  padding: 50px 200px;
+}
+
+*,
+input,
+select,
+textarea {
+  font-family: "Work Sans", sans-serif;
+  font-weight: 300;
+  color: var(--e-global-color-f2824ce);
+}
+
+input,
+select,
+textarea {
+  background-color: var(--e-global-color-31a96fa);
+}
+
+b {
+  font-weight: 400;
+}
+
+nav button {
+  background-color: var(--e-global-color-31a96fa);
+  border: 1px solid var(--e-global-color-31a96fa);
+  &.active {
+    background-color: var(--e-global-color-primary);
+    border-color: var(--e-global-color-31a96fa);
+  }
+}
+
+nav.coin-nav button.active {
+  border-bottom-color: var(--e-global-color-primary);
+}
+
+.coin-container {
+  border-color: var(--e-global-color-31a96fa);
+  background-color: var(--e-global-color-primary);
+}
+
+.coin-description {
+  border: 1px solid var(--e-global-color-31a96fa);
+  padding: 0.5em;
+  margin: 0.5em;
+}
+
+.coin-description-top {
+  border-color: var(--e-global-color-31a96fa);
+}
+
+.coin-result {
+  border-color: var(--e-global-color-31a96fa);
+  & tr {
+    border-color: var(--e-global-color-31a96fa);
+
+    &.results {
+      background-color: var(--e-global-color-secondary);
+      color: var(--success-dark);
+      & td b:first-child {
+        font-weight: 300;
+      }
+      & td:first-child {
+        border-right-color: var(--e-global-color-31a96fa);
+        font-size: 1.1em;
+      }
+    }
+  }
+  & td {
+    width: 25%;
+    & small {
+      color: var(--e-global-color-73ff9b0);
+    }
+
+    &:last-child {
+      background-color: var(--e-global-color-secondary);
+      color: var(--success-dark);
+      font-size: 1.1em;
+    }
+  }
+}
+
+.note {
+  color: var(--e-global-color-feaf3eb);
+}
+
+@media screen and (max-width: 1710px) {
+  body {
+    padding: 50px;
+  }
+}
+
+@media screen and (max-width: 1450px) {
+  body {
+    font-size: 0.9em;
+  }
+}
+
+@media screen and (max-width: 1310px) {
+  td {
+    padding: 0.5em 1em;
+  }
+  .coin-description {
+    display: flex;
+    flex-grow: 1;
+  }
+  .coin-container {
+    flex-direction: column;
+  }
+  .config {
+    width: 80%;
+    padding: 0.5em;
+  }
+  .coin-description-top {
+    width: 20%;
+  }
+  .flex-hash-power > fieldset:first-child {
+    flex-grow: 1;
+  }
+
+  nav.currency-nav {
+    justify-content: flex-start;
+  }
+  .coin-result {
+    margin-left: 0.5em;
+    margin-top: 0;
+  }
+}
+
+@media screen and (max-width: 980px) {
+  article {
+    flex-direction: column;
+  }
+  nav.currency-nav {
+    justify-content: center;
+    flex-direction: row;
+  }
+  nav.currency-nav button.active {
+    border-right-width: 1px;
+    border-bottom: 0;
+  }
+  body {
+    font-size: 0.8em;
+  }
+}
+@media screen and (max-width: 840px) {
+  body {
+    padding: 10px;
+    font-size: 0.75em;
+  }
+}
+
+@media screen and (max-width: 720px) {
+  body {
+    font-size: 0.7em;
+  }
+}
+
+@media screen and (max-width: 670px) {
+  .coin-result {
+    min-width: 30em;
+  }
+  .coin-result td {
+    width: 33%;
+    // padding: 0.5em;
+  }
+  .coin-result td:nth-child(3) {
+    display: none;
+  }
+
+  .results td:last-child {
+    font-size: 1.1em;
+  }
+}

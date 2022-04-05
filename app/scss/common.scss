@@ -1,85 +1,119 @@
-fieldset,
-[data-card] > *,
-dialog > * {
-  background-color: inherit;
+html,
+body {
+  min-height: 100%;
+  margin: 0 auto;
+  max-width: 1000px;
+  background-color: var(--default-bright);
 }
 
-.bg-info-dark {
-  color: var(--info);
+:after,
+:before,
+body,
+input,
+select,
+textarea {
+  font-family: -apple-system, Roboto, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol";
+  color: var(--default);
 }
 
-.bg-info-dark > footer:last-child {
-  border-top: 0.06em solid var(--info-darkest);
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-weight: 300;
 }
 
-.bg-info-dark > header:first-child {
-  border-bottom: 0.06em solid var(--info-darkest);
-}
-
-.w-100 {
-  width: 100%;
-}
-
-.h-100 {
+body {
+  font-weight: 300;
   height: 100%;
+  justify-content: space-between;
 }
 
-table td,
-table th {
-  border-right: 1px solid var(--default-lightest);
-  padding: 0.5em 0.75em;
+header,
+footer {
+  flex: 0 0 auto;
 }
 
-table td:last-child,
-table th:last-child {
-  border-right: 0;
-}
-
-table tr {
-  border-bottom: 1px solid var(--default-lightest);
-}
-table tr:last-child {
-  border-bottom: 0;
-}
-
-.squared {
-  margin: 0;
-  border-radius: 0;
-  min-height: 4rem;
-  min-width: auto;
-}
-
-table.scrollable {
-  display: block;
-  width: 100%;
-}
-
-table.scrollable > tbody {
-  display: block;
-  overflow: auto;
-  overflow-y: scroll;
-  height: 100%;
-}
-
-.overflow-auto {
-  overflow: auto;
-}
-
-.u-p-0 {
+fieldset {
+  border: none;
   padding: 0;
-}
-.u-m-0 {
   margin: 0;
 }
 
-[data-trigger] > summary.w-100 {
+legend {
+  display: block;
+}
+
+input,
+select,
+textarea {
+  outline: 0;
+  border: 0;
+  border: 0.06em solid;
+  border-color: var(--default-light);
+  z-index: 1;
+  position: relative;
   width: 100%;
+  margin-bottom: 1em;
+  color: var(--default);
+  min-height: 2.25em;
+  padding: 0 0.5em;
 }
 
-fieldset.no-helper {
-  margin-bottom: 0;
+button,
+input[type="text"] {
+  background: transparent;
+  border-radius: 0;
+  border-color: inherit;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  margin: 0;
+  padding: 0.2em 0.5em;
+  border: 0;
+  display: inline-block;
+  cursor: pointer;
 }
 
-summary.bg-info {
-  background-color: var(--info);
+table {
+  position: relative;
+  border-collapse: collapse;
+  text-align: right;
+  border-radius: 0.5em;
+  overflow: hidden;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+caption {
+  background-color: inherit;
+  color: inherit;
+  border-bottom: 0.06em solid;
+  border-color: inherit;
+  border-radius: 0.5em 0.5em 0 0;
+  font-size: 0.9em;
+  padding: 1em;
+}
+
+thead {
+  text-align: center;
+  background-color: inherit;
+  color: inherit;
+  border-bottom: 0.06em solid;
+  border-color: inherit;
+}
+
+td,
+th {
+  font-weight: normal;
+  padding: 1em 2em;
+  font-size: 0.9em;
+  border-color: inherit;
+}
+
+tbody > tr {
+  border-color: inherit;
 }

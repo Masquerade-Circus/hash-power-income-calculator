@@ -1,0 +1,167 @@
+nav button {
+  z-index: 2;
+}
+
+nav button.active {
+  border: 1px solid;
+}
+
+nav.coin-nav {
+  z-index: 2;
+  justify-content: center;
+  & button.active {
+    border-bottom: 1px solid;
+  }
+}
+
+nav.currency-nav {
+  justify-content: center;
+  & button.active {
+    border-right: 0;
+  }
+}
+
+article {
+  z-index: 0;
+}
+
+.coin-container {
+  display: flex;
+  justify-content: center;
+  z-index: 0;
+  margin-top: -0px;
+}
+
+.coin-description {
+  min-width: 14em;
+  text-align: center;
+  padding: 0.5em;
+  & figure svg {
+    max-width: 60%;
+    margin: 0 auto;
+    max-height: 5em;
+  }
+}
+
+.coin-description-top {
+  border: 1px solid;
+  & > * {
+    display: block;
+    padding: 0.4em;
+  }
+}
+
+.config {
+  padding: 0.5em 0;
+}
+
+.coin-result {
+  border: 1px solid;
+  overflow: visible;
+  margin: 0.5em;
+  margin-left: 0;
+  min-width: 40em;
+  & tr {
+    border: 1px solid;
+    margin: 2px;
+
+    &.results {
+      text-align: center;
+      & td:first-child {
+        border-right: 1px solid;
+      }
+
+      & td {
+        & b:first-child {
+          font-size: 1.2em;
+        }
+        & b:last-child {
+          font-size: 1.5em;
+        }
+      }
+    }
+  }
+  & td {
+    vertical-align: top;
+    & > * {
+      display: block;
+    }
+    & small {
+      display: block;
+      font-size: 0.8em;
+      &:first-child {
+        font-size: 1em;
+      }
+      &:last-child {
+        font-size: 0.8em;
+      }
+    }
+    & b {
+      font-size: 1.2em;
+    }
+  }
+}
+
+.hash-power {
+  width: 6em;
+  margin-left: 0.5em;
+}
+
+// Color
+
+nav button {
+  background-color: var(--default-lightest);
+  border: 1px solid var(--default-light);
+  &.active {
+    background-color: var(--white);
+    border-color: var(--default-lightest);
+  }
+}
+
+nav.coin-nav button.active {
+  border-bottom-color: var(--white);
+}
+
+.coin-container {
+  border-color: var(--default-lightest);
+  background-color: var(--white);
+}
+
+.coin-description-top {
+  border-color: 1px solid var(--default-light);
+}
+
+.coin-result {
+  border-color: var(--default-light);
+  & tr {
+    border-color: var(--default-light);
+
+    &.results {
+      background-color: var(--success-lightest);
+      color: var(--success-dark);
+      & td:first-child {
+        border-right-color: var(--default-light);
+      }
+    }
+  }
+  & td {
+    & small {
+      color: var(--default);
+    }
+
+    &:last-child {
+      background-color: var(--success-lightest);
+      color: var(--success-dark);
+    }
+  }
+}
+
+.hash-power {
+}
+
+.note {
+  display: block;
+  text-align: right;
+  font-size: 0.9em;
+  padding: 0.5em;
+}
