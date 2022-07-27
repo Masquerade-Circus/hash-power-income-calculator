@@ -33,6 +33,7 @@ const Store = {
   config: {
     powerCost: DefaultConfig.powerCost,
     poolFee: DefaultConfig.poolFee,
+    customPrice: 0,
     BTC: { ...CryptoCurrencies.BTC.config },
     ETH: { ...CryptoCurrencies.ETH.config },
     ETC: { ...CryptoCurrencies.ETC.config },
@@ -52,7 +53,10 @@ function CoinNav() {
           v-class={{
             active: Store.coin.symbol === key
           }}
-          onclick={() => (Store.coin = CryptoCurrencies[key])}
+          onclick={() => {
+            Store.coin = CryptoCurrencies[key];
+            Store.config.customPrice = null;
+          }}
         >
           {key}
         </button>
@@ -69,7 +73,10 @@ function CurrencyNav() {
           v-class={{
             active: Store.currency === key
           }}
-          onclick={() => (Store.currency = key)}
+          onclick={() => {
+            Store.currency = key;
+            Store.config.customPrice = null;
+          }}
         >
           {key}
         </button>
@@ -83,8 +90,13 @@ function CoinDescription() {
     <div class="coin-description-top">
       <figure>{Store.coin.icon}</figure>
       <b>{Store.coin.name}</b>
-      <small>
-        1 {Store.coin.symbol} = {Store.result.price} {Store.currency}
+      <small class="flex flex-row">
+        <span class="u-p-xs u-no-warp">1 {Store.coin.symbol} = </span>
+        <input type="number" v-model={[Store.config, "customPrice"]} step="0.01" class="u-m-0" />
+        <span class="u-p-xs u-no-warp">{Store.currency}</span>
+      </small>
+      <small v-format-money={Store.currency} class="note text-xs">
+        {Store.result.realPrice}
       </small>
     </div>
   );
@@ -128,10 +140,10 @@ function ManualConfig() {
             </fieldset>
           </div>
           <fieldset>
-            <legend>Power Consumption (w)</legend>
+            <legend>Power Consumption (W)</legend>
             <input
               type="number"
-              placeholder="Power Consumption (w)"
+              placeholder="Power Consumption (W)"
               v-model={[Store.config[Store.coin.symbol], "power"]}
               onkeyup={v.update}
             />
@@ -243,8 +255,28 @@ function Results() {
   return (
     <tr class="results">
       <td colspan="2">
-        <b>Profit by day</b>
-        <b v-format-money={Store.currency}>{Store.result.daily.profit}</b>
+        <dl>
+          <dt>
+            <dd>
+              Cost by <span class="text-sm">{Store.coin.name}</span> mined
+            </dd>
+            <dd>
+              <b v-format-money={Store.currency}>{Store.result.costPerMinedCoin}</b>
+            </dd>
+          </dt>
+          <dt>
+            <dd>Electricity BreakEven</dd>
+            <dd>
+              <b v-format-money={Store.currency}>{Store.result.electricityPriceBreakEven}</b>
+            </dd>
+          </dt>
+          <dt>
+            <dd>Hashprice</dd>
+            <dd>
+              <b v-format-money={Store.currency}>{Store.result.hashPrice}</b>
+            </dd>
+          </dt>
+        </dl>
       </td>
       <td colspan="2">
         <b>Profit by month</b>
@@ -275,6 +307,7 @@ async function computeProfit() {
   );
 
   let results = await calculatorService.calculateCoinForHashRate({
+    customPrice: Store.config.customPrice,
     coinSymbol: CoinSymbolEnum[Store.coin.symbol],
     hashRate,
     power: Store.config[Store.coin.symbol].power,
@@ -284,6 +317,7 @@ async function computeProfit() {
   });
 
   Store.result = results;
+  Store.config.customPrice = results.price;
   console.log("Done computing profit.");
   v.update();
 }
@@ -292,6 +326,7 @@ export function App() {
   useCallback(
     () => computeProfit(),
     [
+      Store.config.customPrice,
       Store.coin.symbol,
       Store.currency,
       Store.config[Store.coin.symbol].hashRateAmount,
@@ -322,6 +357,6 @@ export function App() {
         </table>
       </section>
     </article>,
-    <small class="note">Data is updated every 30 minutes</small>
+    <small class="note text-sm text-right">Data is updated every 30 minutes</small>
   ];
 }

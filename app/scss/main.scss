@@ -45,7 +45,7 @@ article {
 
 .coin-description-top {
   border: 1px solid;
-  & > * {
+  & > figure, > b {
     display: block;
     padding: 0.4em;
   }
@@ -156,12 +156,7 @@ nav.coin-nav button.active {
   }
 }
 
-.hash-power {
-}
-
 .note {
   display: block;
-  text-align: right;
-  font-size: 0.9em;
   padding: 0.5em;
 }

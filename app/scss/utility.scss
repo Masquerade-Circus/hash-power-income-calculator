@@ -4,6 +4,59 @@
   }
 }
 
+.text-xs {
+  font-size: 0.75rem;
+}
+.text-sm {
+  font-size: 0.875rem;
+}
+.text-md {
+  font-size: 1rem;
+}
+.text-lg {
+  font-size: 1.125rem;
+}
+.text-xl {
+  font-size: 1.25rem;
+}
+.text-2xl {
+  font-size: 1.5rem;
+}
+
+.text-left {
+  text-align: left;
+}
+.text-center {
+  text-align: center;
+}
+.text-right {
+  text-align: right;
+}
+
+
+.u-p-xs {
+  padding: 0.25rem;
+}
+.u-p-sm {
+  padding: 0.5rem;
+}
+.u-p-md {
+  padding: 1rem;
+}
+.u-p-lg {
+  padding: 1.5rem;
+}
+.u-p-xl {
+  padding: 2rem;
+}
+.u-p-2xl {
+  padding: 3rem;
+}
+
 .u-m-0 {
   margin: 0;
+}
+
+.u-no-warp {
+  white-space: nowrap;
 }

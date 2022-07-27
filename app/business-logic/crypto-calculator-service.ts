@@ -18,7 +18,6 @@ const MinerstatRequest = Request.new("https://api.minerstat.com/v2/coins", {
   methods: ["get"]
 });
 
-const OneDayInMilliSeconds = 1000 * 60 * 60 * 24;
 const ThirtyMinutesInMilliSeconds = 1000 * 60 * 30;
 
 const DefaultCacheTime = ThirtyMinutesInMilliSeconds;
@@ -63,6 +62,31 @@ interface CoinInterface {
   updated: number;
 }
 
+interface PriceItemInterface {
+  aud: number;
+  brl: number;
+  cad: number;
+  chf: number;
+  cny: number;
+  eur: number;
+  gbp: number;
+  hkd: number;
+  jpy: number;
+  mxn: number;
+  rub: number;
+  usd: number;
+}
+
+interface PricesInterface {
+  bitcoin: PriceItemInterface;
+  dash: PriceItemInterface;
+  ethereum: PriceItemInterface;
+  "ethereum-classic": PriceItemInterface;
+  litecoin: PriceItemInterface;
+  monero: PriceItemInterface;
+  zcash: PriceItemInterface;
+}
+
 export interface CalculationResult {
   mined: number;
   minedFee: number;
@@ -79,6 +103,10 @@ export interface CalculationsResult {
   yearly: CalculationResult;
   currency: string;
   price: number;
+  realPrice: number;
+  costPerMinedCoin: number;
+  electricityPriceBreakEven: number;
+  hashPrice: number;
 }
 
 export const CryptoCurrencies = {
@@ -200,7 +228,7 @@ export class CalculatorService {
     return false;
   };
 
-  private setCache(path: string, value: any): void {
+  private setCache(path: string, value: unknown): void {
     let dateNow = Date.now();
     storageService.set(path, {
       value,
@@ -208,35 +236,35 @@ export class CalculatorService {
     });
   }
 
-  async ping(): Promise<any> {
-    if (this.useCache("ping")) {
-      return storageService.get("ping.value");
-    }
+  // async ping(): Promise<unknown> {
+  //   if (this.useCache("ping")) {
+  //     return storageService.get("ping.value");
+  //   }
 
-    const response = await CoinGeckoRequest.get("/ping");
-    this.setCache("ping", response);
-    return response;
-  }
+  //   const response = await CoinGeckoRequest.get("/ping");
+  //   this.setCache("ping", response);
+  //   return response;
+  // }
 
-  async getCoinsList(): Promise<any> {
-    if (this.useCache("coinsList")) {
-      return storageService.get("coinsList.value");
-    }
-    const response = await CoinGeckoRequest.get("/coins/list");
-    this.setCache("coinsList", response);
-    return response;
-  }
+  // async getCoinsList(): Promise<any> {
+  //   if (this.useCache("coinsList")) {
+  //     return storageService.get("coinsList.value");
+  //   }
+  //   const response = await CoinGeckoRequest.get("/coins/list");
+  //   this.setCache("coinsList", response);
+  //   return response;
+  // }
 
-  async getSupportedCurrencies(): Promise<any> {
-    if (this.useCache("supportedCurrencies")) {
-      return storageService.get("supportedCurrencies.value");
-    }
-    const response = await CoinGeckoRequest.get("/simple/supported_vs_currencies");
-    this.setCache("supportedCurrencies", response);
-    return response;
-  }
+  // async getSupportedCurrencies(): Promise<any> {
+  //   if (this.useCache("supportedCurrencies")) {
+  //     return storageService.get("supportedCurrencies.value");
+  //   }
+  //   const response = await CoinGeckoRequest.get("/simple/supported_vs_currencies");
+  //   this.setCache("supportedCurrencies", response);
+  //   return response;
+  // }
 
-  async getPrices(): Promise<any> {
+  async getPrices(): Promise<PricesInterface> {
     if (this.useCache("prices")) {
       return storageService.get("prices.value");
     }
@@ -262,8 +290,7 @@ export class CalculatorService {
   }
 
   getHashRateFromString(hashRateString: HashRateStringToNumber, amount: number) {
-    const hashRate = amount * Number(HashRateStringToNumber[hashRateString]);
-    return hashRate;
+    return amount * Number(HashRateStringToNumber[hashRateString]);
   }
 
   async calculateCoinForHashRate({
@@ -273,8 +300,10 @@ export class CalculatorService {
     powerCost,
     currency,
     algorithm,
-    poolFee
+    poolFee,
+    customPrice
   }: {
+    customPrice: number;
     coinSymbol: CoinSymbolEnum;
     hashRate: number;
     power: number;
@@ -302,19 +331,23 @@ export class CalculatorService {
 
     let currencyLowerCased = (currency || "usd").toLowerCase();
 
-    let price =
+    let realPrice =
       pricesForAllCoins[CryptoCurrencies[coinSymbol].id][currencyLowerCased] ||
       pricesForAllCoins[CryptoCurrencies[coinSymbol].id].usd;
+    let coinPrice = customPrice || realPrice;
 
-    const reward = coin.reward * hashRate;
-    const fee = reward * poolFee;
-    const rewardWithoutFee = reward - fee;
-    const dailyMined = rewardWithoutFee * 24;
-    const dailyMinedFee = fee * 24;
-    const dailyIncome = dailyMined * price;
-    const dailyIncomeFee = dailyMinedFee * price;
+    const coinRewardPerDayMined = coin.reward * hashRate * 24;
+    const dailyMinedFee = coinRewardPerDayMined * poolFee;
+    const rewardWithoutFee = coinRewardPerDayMined - dailyMinedFee;
+    const dailyMined = rewardWithoutFee;
+    const dailyIncome = dailyMined * coinPrice;
+    const dailyIncomeFee = dailyMinedFee * coinPrice;
     const dailyPowerCost = (powerCost / 1000) * power * 24;
     const dailyProfit = dailyIncome - dailyPowerCost;
+
+    const costPerMinedCoin = (dailyPowerCost + dailyIncomeFee) / dailyMined;
+    const electricityPriceBreakEven = ((dailyMined * coinPrice * 1000) / power) * 24;
+    const hashPrice = coinRewardPerDayMined * coinPrice;
 
     return {
       daily: {
@@ -350,7 +383,11 @@ export class CalculatorService {
         profit: dailyProfit * 365
       },
       currency,
-      price
+      price: coinPrice,
+      realPrice: realPrice,
+      costPerMinedCoin,
+      electricityPriceBreakEven,
+      hashPrice
     };
   }
 }

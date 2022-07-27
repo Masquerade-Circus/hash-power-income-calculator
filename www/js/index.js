@@ -1109,7 +1109,6 @@
   var MinerstatRequest = import_request.default.new("https://api.minerstat.com/v2/coins", {
     methods: ["get"]
   });
-  var OneDayInMilliSeconds = 1e3 * 60 * 60 * 24;
   var ThirtyMinutesInMilliSeconds = 1e3 * 60 * 30;
   var DefaultCacheTime = ThirtyMinutesInMilliSeconds;
   var CoinSymbolEnum = /* @__PURE__ */ ((CoinSymbolEnum2) => {
@@ -1245,30 +1244,6 @@
         date: dateNow
       });
     }
-    async ping() {
-      if (this.useCache("ping")) {
-        return storageService.get("ping.value");
-      }
-      const response = await CoinGeckoRequest.get("/ping");
-      this.setCache("ping", response);
-      return response;
-    }
-    async getCoinsList() {
-      if (this.useCache("coinsList")) {
-        return storageService.get("coinsList.value");
-      }
-      const response = await CoinGeckoRequest.get("/coins/list");
-      this.setCache("coinsList", response);
-      return response;
-    }
-    async getSupportedCurrencies() {
-      if (this.useCache("supportedCurrencies")) {
-        return storageService.get("supportedCurrencies.value");
-      }
-      const response = await CoinGeckoRequest.get("/simple/supported_vs_currencies");
-      this.setCache("supportedCurrencies", response);
-      return response;
-    }
     async getPrices() {
       if (this.useCache("prices")) {
         return storageService.get("prices.value");
@@ -1291,8 +1266,7 @@
       return response;
     }
     getHashRateFromString(hashRateString, amount) {
-      const hashRate = amount * Number(HashRateStringToNumber[hashRateString]);
-      return hashRate;
+      return amount * Number(HashRateStringToNumber[hashRateString]);
     }
     async calculateCoinForHashRate({
       coinSymbol,
@@ -1301,7 +1275,8 @@
       powerCost,
       currency,
       algorithm,
-      poolFee
+      poolFee,
+      customPrice
     }) {
       let coins = await this.getCoinsData();
       let pricesForAllCoins = await this.getPrices();
@@ -1316,16 +1291,19 @@
         throw new Error("Algorithm not supported");
       }
       let currencyLowerCased = (currency || "usd").toLowerCase();
-      let price = pricesForAllCoins[CryptoCurrencies[coinSymbol].id][currencyLowerCased] || pricesForAllCoins[CryptoCurrencies[coinSymbol].id].usd;
-      const reward = coin.reward * hashRate;
-      const fee = reward * poolFee;
-      const rewardWithoutFee = reward - fee;
-      const dailyMined = rewardWithoutFee * 24;
-      const dailyMinedFee = fee * 24;
-      const dailyIncome = dailyMined * price;
-      const dailyIncomeFee = dailyMinedFee * price;
+      let realPrice = pricesForAllCoins[CryptoCurrencies[coinSymbol].id][currencyLowerCased] || pricesForAllCoins[CryptoCurrencies[coinSymbol].id].usd;
+      let coinPrice = customPrice || realPrice;
+      const coinRewardPerDayMined = coin.reward * hashRate * 24;
+      const dailyMinedFee = coinRewardPerDayMined * poolFee;
+      const rewardWithoutFee = coinRewardPerDayMined - dailyMinedFee;
+      const dailyMined = rewardWithoutFee;
+      const dailyIncome = dailyMined * coinPrice;
+      const dailyIncomeFee = dailyMinedFee * coinPrice;
       const dailyPowerCost = powerCost / 1e3 * power * 24;
       const dailyProfit = dailyIncome - dailyPowerCost;
+      const costPerMinedCoin = (dailyPowerCost + dailyIncomeFee) / dailyMined;
+      const electricityPriceBreakEven = dailyMined * coinPrice * 1e3 / power * 24;
+      const hashPrice = coinRewardPerDayMined * coinPrice;
       return {
         daily: {
           mined: dailyMined,
@@ -1360,7 +1338,11 @@
           profit: dailyProfit * 365
         },
         currency,
-        price
+        price: coinPrice,
+        realPrice,
+        costPerMinedCoin,
+        electricityPriceBreakEven,
+        hashPrice
       };
     }
   };
@@ -1427,6 +1409,7 @@
     config: {
       powerCost: DefaultConfig.powerCost,
       poolFee: DefaultConfig.poolFee,
+      customPrice: 0,
       BTC: { ...CryptoCurrencies.BTC.config },
       ETH: { ...CryptoCurrencies.ETH.config },
       ETC: { ...CryptoCurrencies.ETC.config },
@@ -1445,7 +1428,10 @@
       "v-class": {
         active: Store.coin.symbol === key
       },
-      onclick: () => Store.coin = CryptoCurrencies[key]
+      onclick: () => {
+        Store.coin = CryptoCurrencies[key];
+        Store.config.customPrice = null;
+      }
     }, key));
   }
   function CurrencyNav() {
@@ -1456,13 +1442,30 @@
       "v-class": {
         active: Store.currency === key
       },
-      onclick: () => Store.currency = key
+      onclick: () => {
+        Store.currency = key;
+        Store.config.customPrice = null;
+      }
     }, key));
   }
   function CoinDescription() {
     return /* @__PURE__ */ lib_default("div", {
       class: "coin-description-top"
-    }, /* @__PURE__ */ lib_default("figure", null, Store.coin.icon), /* @__PURE__ */ lib_default("b", null, Store.coin.name), /* @__PURE__ */ lib_default("small", null, "1 ", Store.coin.symbol, " = ", Store.result.price, " ", Store.currency));
+    }, /* @__PURE__ */ lib_default("figure", null, Store.coin.icon), /* @__PURE__ */ lib_default("b", null, Store.coin.name), /* @__PURE__ */ lib_default("small", {
+      class: "flex flex-row"
+    }, /* @__PURE__ */ lib_default("span", {
+      class: "u-p-xs u-no-warp"
+    }, "1 ", Store.coin.symbol, " = "), /* @__PURE__ */ lib_default("input", {
+      type: "number",
+      "v-model": [Store.config, "customPrice"],
+      step: "0.01",
+      class: "u-m-0"
+    }), /* @__PURE__ */ lib_default("span", {
+      class: "u-p-xs u-no-warp"
+    }, Store.currency)), /* @__PURE__ */ lib_default("small", {
+      "v-format-money": Store.currency,
+      class: "note text-xs"
+    }, Store.result.realPrice));
   }
   function MinerSelect() {
     return /* @__PURE__ */ lib_default("div", {
@@ -1487,9 +1490,9 @@
         Store.config[Store.coin.symbol].hashRateType = e.target.value;
         lib_default.update();
       }
-    }, /* @__PURE__ */ lib_default("option", null, "Ph/s"), /* @__PURE__ */ lib_default("option", null, "Th/s"), /* @__PURE__ */ lib_default("option", null, "Gh/s"), /* @__PURE__ */ lib_default("option", null, "Mh/s"), /* @__PURE__ */ lib_default("option", null, "Kh/s"), /* @__PURE__ */ lib_default("option", null, "H/s")))), /* @__PURE__ */ lib_default("fieldset", null, /* @__PURE__ */ lib_default("legend", null, "Power Consumption (w)"), /* @__PURE__ */ lib_default("input", {
+    }, /* @__PURE__ */ lib_default("option", null, "Ph/s"), /* @__PURE__ */ lib_default("option", null, "Th/s"), /* @__PURE__ */ lib_default("option", null, "Gh/s"), /* @__PURE__ */ lib_default("option", null, "Mh/s"), /* @__PURE__ */ lib_default("option", null, "Kh/s"), /* @__PURE__ */ lib_default("option", null, "H/s")))), /* @__PURE__ */ lib_default("fieldset", null, /* @__PURE__ */ lib_default("legend", null, "Power Consumption (W)"), /* @__PURE__ */ lib_default("input", {
       type: "number",
-      placeholder: "Power Consumption (w)",
+      placeholder: "Power Consumption (W)",
       "v-model": [Store.config[Store.coin.symbol], "power"],
       onkeyup: lib_default.update
     })), /* @__PURE__ */ lib_default("fieldset", null, /* @__PURE__ */ lib_default("legend", null, "Power Cost Kw/h ($)"), /* @__PURE__ */ lib_default("input", {
@@ -1559,9 +1562,15 @@
       class: "results"
     }, /* @__PURE__ */ lib_default("td", {
       colspan: "2"
-    }, /* @__PURE__ */ lib_default("b", null, "Profit by day"), /* @__PURE__ */ lib_default("b", {
+    }, /* @__PURE__ */ lib_default("dl", null, /* @__PURE__ */ lib_default("dt", null, /* @__PURE__ */ lib_default("dd", null, "Cost by ", /* @__PURE__ */ lib_default("span", {
+      class: "text-sm"
+    }, Store.coin.name), " mined"), /* @__PURE__ */ lib_default("dd", null, /* @__PURE__ */ lib_default("b", {
       "v-format-money": Store.currency
-    }, Store.result.daily.profit)), /* @__PURE__ */ lib_default("td", {
+    }, Store.result.costPerMinedCoin))), /* @__PURE__ */ lib_default("dt", null, /* @__PURE__ */ lib_default("dd", null, "Electricity BreakEven"), /* @__PURE__ */ lib_default("dd", null, /* @__PURE__ */ lib_default("b", {
+      "v-format-money": Store.currency
+    }, Store.result.electricityPriceBreakEven))), /* @__PURE__ */ lib_default("dt", null, /* @__PURE__ */ lib_default("dd", null, "Hashprice"), /* @__PURE__ */ lib_default("dd", null, /* @__PURE__ */ lib_default("b", {
+      "v-format-money": Store.currency
+    }, Store.result.hashPrice))))), /* @__PURE__ */ lib_default("td", {
       colspan: "2"
     }, /* @__PURE__ */ lib_default("b", null, "Profit by month"), /* @__PURE__ */ lib_default("b", {
       "v-format-money": Store.currency
@@ -1581,6 +1590,7 @@
     }
     const hashRate = calculatorService.getHashRateFromString(Store.config[Store.coin.symbol].hashRateType, Store.config[Store.coin.symbol].hashRateAmount);
     let results = await calculatorService.calculateCoinForHashRate({
+      customPrice: Store.config.customPrice,
       coinSymbol: CoinSymbolEnum[Store.coin.symbol],
       hashRate,
       power: Store.config[Store.coin.symbol].power,
@@ -1589,11 +1599,13 @@
       poolFee: Store.config.poolFee / 100
     });
     Store.result = results;
+    Store.config.customPrice = results.price;
     console.log("Done computing profit.");
     lib_default.update();
   }
   function App() {
     (0, import_hooks.useCallback)(() => computeProfit(), [
+      Store.config.customPrice,
       Store.coin.symbol,
       Store.currency,
       Store.config[Store.coin.symbol].hashRateAmount,
@@ -1622,7 +1634,7 @@
         by: "yearly"
       }), /* @__PURE__ */ lib_default(Results, null))))),
       /* @__PURE__ */ lib_default("small", {
-        class: "note"
+        class: "note text-sm text-right"
       }, "Data is updated every 30 minutes")
     ];
   }

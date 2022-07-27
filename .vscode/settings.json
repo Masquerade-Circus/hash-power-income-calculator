@@ -1,5 +1,17 @@
 {
-  "cSpell.words": ["dayjs", "dunita", "eqeqeq", "fastify", "Fgxt", "onbeforeupdate", "oncleanup", "oncreate", "onremove"],
+  "cSpell.words": [
+    "dayjs",
+    "dunita",
+    "eqeqeq",
+    "fastify",
+    "Fgxt",
+    "monero",
+    "onbeforeupdate",
+    "oncleanup",
+    "oncreate",
+    "onremove",
+    "zcash"
+  ],
   "prettier.trailingComma": "none",
   "prettier.printWidth": 120,
   "svg.preview.background": "white"

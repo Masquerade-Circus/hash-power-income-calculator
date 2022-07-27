@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const Key = "hash-power-income-calculator";
 export class StorageService {
   db: Storage;
@@ -24,10 +25,7 @@ export class StorageService {
 
     while (parsed.length) {
       next = parsed.shift();
-      if (
-        next in result === false ||
-        (parsed.length > 0 && typeof result[next] !== "object")
-      ) {
+      if (next in result === false || (parsed.length > 0 && typeof result[next] !== "object")) {
         return fallback;
       }
 
@@ -46,10 +44,7 @@ export class StorageService {
 
     while (parsed.length) {
       next = parsed.shift();
-      if (
-        next in result === false ||
-        (parsed.length > 0 && typeof result[next] !== "object")
-      ) {
+      if (next in result === false || (parsed.length > 0 && typeof result[next] !== "object")) {
         result[next] = {};
       }
 
