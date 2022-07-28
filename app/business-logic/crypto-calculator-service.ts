@@ -301,9 +301,11 @@ export class CalculatorService {
     currency,
     algorithm,
     poolFee,
-    customPrice
+    customPrice,
+    customDailyMined
   }: {
     customPrice: number;
+    customDailyMined: number;
     coinSymbol: CoinSymbolEnum;
     hashRate: number;
     power: number;
@@ -336,10 +338,17 @@ export class CalculatorService {
       pricesForAllCoins[CryptoCurrencies[coinSymbol].id].usd;
     let coinPrice = customPrice || realPrice;
 
-    const coinRewardPerDayMined = coin.reward * hashRate * 24;
-    const dailyMinedFee = coinRewardPerDayMined * poolFee;
-    const rewardWithoutFee = coinRewardPerDayMined - dailyMinedFee;
-    const dailyMined = rewardWithoutFee;
+    let coinRewardPerDayMined = coin.reward * hashRate * 24;
+    let dailyMinedFee = coinRewardPerDayMined * poolFee;
+    let dailyMined = coinRewardPerDayMined - dailyMinedFee;
+
+    if (customDailyMined) {
+      dailyMined = customDailyMined;
+      let intPoolFee = poolFee * 100;
+      dailyMinedFee = (dailyMined / (100 - intPoolFee)) * intPoolFee;
+      coinRewardPerDayMined = dailyMined + dailyMinedFee;
+    }
+
     const dailyIncome = dailyMined * coinPrice;
     const dailyIncomeFee = dailyMinedFee * coinPrice;
     const dailyPowerCost = (powerCost / 1000) * power * 24;

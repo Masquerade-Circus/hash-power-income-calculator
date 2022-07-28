@@ -16,12 +16,15 @@
     }
     return to;
   };
-  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target, mod));
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+    mod
+  ));
 
   // node_modules/valyrian.js/plugins/request.js
   var require_request = __commonJS({
     "node_modules/valyrian.js/plugins/request.js"(exports, module) {
-      var isNodeJs2 = Boolean(typeof process !== "undefined" && process.versions && process.versions.node);
+      var isNodeJs = Boolean(typeof process !== "undefined" && process.versions && process.versions.node);
       function serialize(obj, prefix) {
         return Object.keys(obj).map((p) => {
           let k = prefix ? `${prefix}[${p}]` : p;
@@ -35,7 +38,7 @@
         if (parts[1]) {
           u += `?${parts[1]}`;
         }
-        if (isNodeJs2 && typeof options.urls.node === "string") {
+        if (isNodeJs && typeof options.urls.node === "string") {
           options.urls.node = options.urls.node;
           if (typeof options.urls.api === "string") {
             options.urls.api = options.urls.api.replace(/\/$/gi, "").trim();
@@ -97,19 +100,34 @@
             }
           }
           let response = await fetch(parseUrl(url2, opts), innerOptions);
+          let body = null;
           if (!response.ok) {
             let err = new Error(response.statusText);
             err.response = response;
+            if (/text/gi.test(acceptType)) {
+              err.body = await response.text();
+            }
+            if (/json/gi.test(acceptType)) {
+              try {
+                err.body = await response.json();
+              } catch (error) {
+              }
+            }
             throw err;
           }
           if (innerOptions.resolveWithFullResponse) {
             return response;
           }
           if (/text/gi.test(acceptType)) {
-            return response.text();
+            body = await response.text();
+            return body;
           }
           if (/json/gi.test(acceptType)) {
-            return response.json();
+            try {
+              body = await response.json();
+              return body;
+            } catch (error) {
+            }
           }
           return response;
         }
@@ -151,35 +169,44 @@
   // node_modules/valyrian.js/plugins/hooks.js
   var require_hooks = __commonJS({
     "node_modules/valyrian.js/plugins/hooks.js"(exports, module) {
-      var v3 = {
+      var v2 = {
         current: {}
       };
-      function createHook({ create, update: update2, remove, returnValue }) {
+      function createHook({ onCreate, onUpdate, onRemove, onCleanup, returnValue }) {
         return (...args) => {
-          let { component, vnode, oldVnode } = v3.current;
-          if (vnode.components === void 0) {
+          let { component, vnode, oldVnode } = v2.current;
+          if (!vnode.components) {
             vnode.components = [];
-            v3.onUnmount(() => Reflect.deleteProperty(vnode, "components"));
+            v2.onUnmount(() => Reflect.deleteProperty(vnode, "components"));
           }
           if (vnode.components.indexOf(component) === -1) {
             vnode.components.push(component);
           }
-          if (component.hooks === void 0) {
+          if (!component.hooks) {
             component.hooks = [];
-            v3.onUnmount(() => Reflect.deleteProperty(component, "hooks"));
+            v2.onUnmount(() => Reflect.deleteProperty(component, "hooks"));
           }
           let hook;
           if (!oldVnode || !oldVnode.components || oldVnode.components[vnode.components.length - 1] !== component) {
-            hook = create(...args);
+            hook = onCreate(...args);
             component.hooks.push(hook);
-            if (remove) {
-              v3.onUnmount(() => remove(hook));
+            if (onRemove) {
+              v2.onUnmount(() => onRemove(hook));
             }
           } else {
-            hook = component.hooks[component.hooks.length - 1];
-            if (update2) {
-              update2(hook, ...args);
+            if ("calls" in component === false) {
+              component.calls = -1;
+              v2.onUnmount(() => Reflect.deleteProperty(component, "calls"));
             }
+            v2.onCleanup(() => component.calls = -1);
+            component.calls++;
+            hook = component.hooks[component.calls];
+            if (onUpdate) {
+              onUpdate(hook, ...args);
+            }
+          }
+          if (onCleanup) {
+            v2.onCleanup(() => onCleanup(hook));
           }
           if (returnValue) {
             return returnValue(hook);
@@ -188,16 +215,15 @@
         };
       }
       var useState = createHook({
-        create: (value) => {
-          let state = value;
-          let setState = (value2) => state = value2;
+        onCreate: (value) => {
           let stateObj = /* @__PURE__ */ Object.create(null);
-          stateObj.toJSON = stateObj.toString = stateObj.valueOf = () => typeof state === "function" ? state() : state;
-          return [stateObj, setState];
+          stateObj.value = value;
+          stateObj.toJSON = stateObj.toString = stateObj.valueOf = () => typeof stateObj.value === "function" ? stateObj.value() : stateObj.value;
+          return [stateObj, (value2) => stateObj.value = value2];
         }
       });
-      var useEffect = createHook({
-        create: (effect, changes) => {
+      var useEffect2 = createHook({
+        onCreate: (effect, changes) => {
           let hook = { effect, prev: [] };
           if (changes === null) {
             hook.onRemove = effect;
@@ -207,7 +233,7 @@
           hook.onCleanup = hook.effect();
           return hook;
         },
-        update: (hook, effect, changes) => {
+        onUpdate: (hook, effect, changes) => {
           if (typeof changes === "undefined") {
             hook.prev = changes;
             if (typeof hook.onCleanup === "function") {
@@ -229,7 +255,7 @@
             }
           }
         },
-        remove: (hook) => {
+        onRemove: (hook) => {
           if (typeof hook.onCleanup === "function") {
             hook.onCleanup();
           }
@@ -238,20 +264,20 @@
           }
         }
       });
-      var useRef = createHook({
-        create: (initialValue) => {
-          v3.directive("ref", (ref, vnode) => {
+      var useRef2 = createHook({
+        onCreate: (initialValue) => {
+          v2.directive("ref", (ref, vnode) => {
             ref.current = vnode.dom;
           });
           return { current: initialValue };
         }
       });
-      var useCallback2 = createHook({
-        create: (callback, changes) => {
+      var useCallback = createHook({
+        onCreate: (callback, changes) => {
           callback();
           return { callback, changes };
         },
-        update: (hook, callback, changes) => {
+        onUpdate: (hook, callback, changes) => {
           for (let i = 0, l = changes.length; i < l; i++) {
             if (changes[i] !== hook.changes[i]) {
               hook.changes = changes;
@@ -262,10 +288,10 @@
         }
       });
       var useMemo = createHook({
-        create: (callback, changes) => {
+        onCreate: (callback, changes) => {
           return { callback, changes, value: callback() };
         },
-        update: (hook, callback, changes) => {
+        onUpdate: (hook, callback, changes) => {
           for (let i = 0, l = changes.length; i < l; i++) {
             if (changes[i] !== hook.changes[i]) {
               hook.changes = changes;
@@ -279,13 +305,13 @@
         }
       });
       function plugin(vInstance) {
-        v3 = vInstance;
+        v2 = vInstance;
       }
       plugin.createHook = createHook;
       plugin.useState = useState;
-      plugin.useEffect = useEffect;
-      plugin.useRef = useRef;
-      plugin.useCallback = useCallback2;
+      plugin.useEffect = useEffect2;
+      plugin.useRef = useRef2;
+      plugin.useCallback = useCallback;
       plugin.useMemo = useMemo;
       plugin.default = plugin;
       module.exports = plugin;
@@ -293,54 +319,27 @@
   });
 
   // node_modules/valyrian.js/lib/index.ts
-  var ComponentString = "__component__";
-  var TextString = "#text";
-  var isNodeJs = Boolean(typeof process !== "undefined" && process.versions && process.versions.node);
-  var Und = void 0;
-  var Vnode = function Vnode2(tag, props, children) {
-    this.props = props;
-    this.children = children;
-    this.tag = tag;
-  };
-  function isVnode(object) {
-    return object instanceof Vnode;
-  }
-  function isComponent(component) {
-    return typeof component === "function" || typeof component === "object" && component !== null && "view" in component;
-  }
-  function isVnodeComponent(vnode) {
-    return vnode instanceof Vnode && vnode.tag === ComponentString;
-  }
-  function createDomElement(tag, isSVG = false) {
-    return isSVG ? document.createElementNS("http://www.w3.org/2000/svg", tag) : document.createElement(tag);
-  }
-  function domToVnode(dom) {
-    if (dom.nodeType === 3) {
-      let vnode = v(TextString, {}, []);
-      vnode.nodeValue = dom.nodeValue;
-      vnode.dom = dom;
-      return vnode;
-    }
-    if (dom.nodeType === 1) {
-      let children = [];
-      for (let i = 0; i < dom.childNodes.length; i++) {
-        let child = domToVnode(dom.childNodes[i]);
-        if (child) {
-          children.push(child);
+  var current = {};
+  var onCleanupList = [];
+  var onMountList = [];
+  var onUpdateList = [];
+  var onUnmountList = [];
+  var emptyComponent = () => "";
+  var eventListenerNames = {};
+  function eventListener(e) {
+    let dom = e.target;
+    let name = `v-on${e.type}`;
+    while (dom) {
+      if (dom[name]) {
+        dom[name](e, dom);
+        if (!e.defaultPrevented) {
+          v.update();
         }
+        return;
       }
-      let props = {};
-      [].forEach.call(dom.attributes, (prop) => props[prop.nodeName] = prop.nodeValue);
-      let vnode = v(dom.tagName.toLowerCase(), props, ...children);
-      vnode.dom = dom;
-      return vnode;
+      dom = dom.parentNode;
     }
   }
-  var trust = (htmlString) => {
-    let div = createDomElement("div");
-    div.innerHTML = htmlString.trim();
-    return [].map.call(div.childNodes, (item) => domToVnode(item));
-  };
   var reservedProps = {
     key: true,
     state: true,
@@ -357,224 +356,179 @@
     "v-html": true,
     "v-model": true
   };
-  var eventListenerNames = {};
-  var onCleanupList = [];
-  var onMountList = [];
-  var onUpdateList = [];
-  var onUnmountList = [];
-  var current = {};
-  function eventListener(e) {
-    let dom = e.target;
-    let name = `v-on${e.type}`;
-    while (dom) {
-      if (dom[name]) {
-        dom[name](e, dom);
-        if (!e.defaultPrevented) {
-          update();
-        }
-        return;
-      }
-      dom = dom.parentNode;
-    }
+  function createDomElement(tag, isSVG = false) {
+    return isSVG ? document.createElementNS("http://www.w3.org/2000/svg", tag) : document.createElement(tag);
   }
-  function onCleanup(callback) {
+  var Vnode = function Vnode2(tag, props, children) {
+    this.tag = tag;
+    this.props = props;
+    this.children = children;
+  };
+  var VnodeText = function VnodeText2(nodeValue) {
+    this.nodeValue = nodeValue;
+  };
+  var VnodeComponent = function VnodeComponent2(component, props, children) {
+    this.component = component;
+    this.props = props;
+    this.children = children;
+  };
+  function domToVnode(dom) {
+    let children = [];
+    for (let i = 0; i < dom.childNodes.length; i++) {
+      let childDom = dom.childNodes[i];
+      if (childDom.nodeType === 3) {
+        let vnode2 = new VnodeText(childDom.nodeValue);
+        vnode2.dom = childDom;
+        children.push(vnode2);
+        continue;
+      }
+      if (childDom.nodeType === 1) {
+        children.push(domToVnode(childDom));
+      }
+    }
+    let props = {};
+    for (let i = 0; i < dom.attributes.length; i++) {
+      let attr = dom.attributes[i];
+      props[attr.nodeName] = attr.nodeValue;
+    }
+    let vnode = new Vnode(dom.tagName.toLowerCase(), props, children);
+    vnode.dom = dom;
+    return vnode;
+  }
+  var v = (tagOrComponent, props, ...children) => {
+    if (typeof tagOrComponent === "string") {
+      return new Vnode(tagOrComponent, props || {}, children);
+    }
+    return new VnodeComponent(tagOrComponent, props || {}, children);
+  };
+  v.fragment = (props, ...vnodes) => {
+    return vnodes;
+  };
+  v.trust = (htmlString) => {
+    let div = createDomElement("div");
+    div.innerHTML = htmlString.trim();
+    return [].map.call(div.childNodes, (item) => domToVnode(item));
+  };
+  v.isVnode = (object) => {
+    return object instanceof Vnode;
+  };
+  v.isVnodeComponent = (object) => {
+    return object instanceof VnodeComponent;
+  };
+  v.isValyrianComponent = (component) => {
+    return Boolean(component && typeof component === "object" && "view" in component);
+  };
+  v.isComponent = (component) => {
+    return Boolean(component && typeof component === "function" || v.isValyrianComponent(component) || v.isVnodeComponent(component));
+  };
+  v.onCleanup = (callback) => {
     if (onCleanupList.indexOf(callback) === -1) {
       onCleanupList.push(callback);
     }
-  }
-  function onUnmount(callback) {
+  };
+  v.onUnmount = (callback) => {
     if (onUnmountList.indexOf(callback) === -1) {
       onUnmountList.push(callback);
     }
-  }
-  function onMount(callback) {
+  };
+  v.onMount = (callback) => {
     if (onMountList.indexOf(callback) === -1) {
       onMountList.push(callback);
     }
-  }
-  function onUpdate(callback) {
+  };
+  v.onUpdate = (callback) => {
     if (onUpdateList.indexOf(callback) === -1) {
       onUpdateList.push(callback);
     }
-  }
-  function mount(container, component) {
-    let appContainer = null;
-    if (isNodeJs) {
-      appContainer = typeof container === "string" ? createDomElement(container === "svg" ? "svg" : "div", container === "svg") : container;
-    } else {
-      appContainer = typeof container === "string" ? document.querySelectorAll(container)[0] : container;
-    }
-    if (!appContainer) {
-      throw new Error("Container not found");
-    }
-    let vnodeComponent;
-    if (isVnodeComponent(component)) {
-      vnodeComponent = component;
-    } else if (isComponent(component)) {
-      vnodeComponent = v(component, {});
-    } else {
-      throw new Error("Component must be a Valyrian Component or a Vnode component");
-    }
-    if (v.isMounted) {
-      unmount();
-    }
-    v.component = vnodeComponent;
-    v.container = appContainer;
-    v.mainVnode = domToVnode(appContainer);
-    return update();
-  }
+  };
   function callCallbackList(list) {
     for (let i = 0; i < list.length; i++) {
       list[i]();
     }
-    list = [];
+    list.length = 0;
   }
-  function update() {
-    if (v.component && v.mainVnode) {
-      onCleanupList.length && callCallbackList(onCleanupList);
-      let oldVnode = v.mainVnode;
-      v.mainVnode = new Vnode(v.mainVnode.tag, v.mainVnode.props, [v.component]);
-      v.mainVnode.dom = oldVnode.dom;
-      patch(v.mainVnode, oldVnode);
-      oldVnode = null;
-      if (v.isMounted === false) {
-        onMountList.length && callCallbackList(onMountList);
-        v.isMounted = true;
-      } else {
-        onUpdateList.length && callCallbackList(onUpdateList);
-      }
-      if (isNodeJs) {
-        return v.mainVnode.dom.innerHTML;
-      }
-    }
-  }
-  function unmount() {
-    if (v.isMounted && v.mainVnode && v.component) {
-      onCleanupList.length && callCallbackList(onCleanupList);
-      onUnmountList.length && callCallbackList(onUnmountList);
-      let oldVnode = v.mainVnode;
-      v.mainVnode = new Vnode(v.mainVnode.tag, v.mainVnode.props, []);
-      v.mainVnode.dom = oldVnode.dom;
-      v.mainVnode.isSVG = oldVnode.isSVG;
-      patch(v.mainVnode, oldVnode);
-      oldVnode = null;
-      v.component = null;
-      v.isMounted = false;
-      if (isNodeJs) {
-        return v.mainVnode.dom.innerHTML;
-      }
-    }
-  }
-  var emptyVnode = new Vnode("__empty__", {}, []);
-  function onremove(vnode) {
-    for (let i = 0; i < vnode.children.length; i++) {
-      vnode.children[i].tag !== TextString && onremove(vnode.children[i]);
-    }
-    vnode.props.onremove && vnode.props.onremove(vnode);
-  }
-  function sharedSetAttribute(prop, value, vnode, oldVnode) {
+  function sharedSetAttribute(prop, newVnode, oldVnode) {
     if (reservedProps[prop]) {
       if (directives[prop]) {
-        return directives[prop](vnode.props[prop], vnode, oldVnode);
+        return directives[prop](newVnode.props[prop], newVnode, oldVnode);
       }
       return;
     }
+    let value = newVnode.props[prop];
+    let dom = newVnode.dom;
     if (typeof value === "function") {
-      if (prop in eventListenerNames === false) {
+      if (!eventListenerNames[prop]) {
+        v.mainVnode.dom.addEventListener(prop.slice(2), eventListener);
         eventListenerNames[prop] = true;
-        v.container.addEventListener(prop.slice(2), eventListener);
       }
-      vnode.dom[`v-${prop}`] = value;
+      dom[`v-${prop}`] = value;
       return;
     }
-    if (prop in vnode.dom && vnode.isSVG === false) {
-      if (vnode.dom[prop] != value) {
-        vnode.dom[prop] = value;
+    if (prop in dom && !newVnode.isSVG) {
+      if (dom[prop] != value) {
+        dom[prop] = value;
       }
       return;
     }
-    if (!oldVnode || oldVnode.props[prop] !== value) {
+    if (!oldVnode || value !== oldVnode.props[prop]) {
       if (value === false) {
-        vnode.dom.removeAttribute(prop);
+        dom.removeAttribute(prop);
       } else {
-        vnode.dom.setAttribute(prop, value);
+        dom.setAttribute(prop, value);
       }
     }
   }
   function setAttribute(name, value, vnode, oldVnode) {
     vnode.props[name] = value;
-    sharedSetAttribute(name, value, vnode, oldVnode);
+    sharedSetAttribute(name, vnode, oldVnode);
   }
-  function setAttributes(vnode, oldVnode) {
-    for (let prop in vnode.props) {
-      if (sharedSetAttribute(prop, vnode.props[prop], vnode, oldVnode) === false) {
+  function setAttributes(newVnode, oldVnode) {
+    for (let prop in newVnode.props) {
+      if (sharedSetAttribute(prop, newVnode, oldVnode) === false) {
         return;
       }
     }
     if (oldVnode) {
-      for (let prop in oldVnode.props) {
-        if (prop in vnode.props === false && typeof oldVnode.props[prop] !== "function" && prop in reservedProps === false) {
-          if (prop in oldVnode.dom && vnode.isSVG === false) {
-            oldVnode.dom[prop] = null;
+      for (let name in oldVnode.props) {
+        if (name in newVnode.props === false && typeof oldVnode.props[name] !== "function" && !reservedProps[name]) {
+          if (name in newVnode.dom && newVnode.isSVG === false) {
+            newVnode.dom[name] = null;
           } else {
-            oldVnode.dom.removeAttribute(prop);
+            newVnode.dom.removeAttribute(name);
           }
         }
       }
     }
   }
-  function patch(newVnode, oldVnode = emptyVnode) {
-    current.vnode = newVnode;
-    current.oldVnode = oldVnode === emptyVnode ? Und : oldVnode;
-    let newTree = newVnode.children;
-    let oldTree = oldVnode.children;
-    for (let i = 0; i < newTree.length; i++) {
-      let childVnode = newTree[i];
-      if (childVnode instanceof Vnode) {
-        if (childVnode.tag !== TextString) {
-          if (childVnode.tag === ComponentString) {
-            let component = childVnode.component;
-            current.component = component;
-            let result = ("view" in component ? component.view : component).call(component, childVnode.props, ...childVnode.children);
-            newTree.splice(i--, 1, result);
-            continue;
-          }
-          childVnode.isSVG = newVnode.isSVG || childVnode.tag === "svg";
-        }
-      } else if (Array.isArray(childVnode)) {
-        newTree.splice(i--, 1, ...childVnode);
-      } else if (childVnode === null || childVnode === Und) {
-        newTree.splice(i--, 1);
-      } else {
-        newTree[i] = new Vnode(TextString, {}, []);
-        newTree[i].nodeValue = childVnode;
-      }
+  var callRemove = (vnode) => {
+    for (let i = 0, l = vnode.children.length; i < l; i++) {
+      vnode.children[i] instanceof Vnode && callRemove(vnode.children[i]);
     }
+    vnode.props.onremove && vnode.props.onremove(vnode);
+  };
+  v.patch = (newParentVnode, oldParentVnode) => {
+    let oldTree = oldParentVnode?.children || [];
+    let newTree = newParentVnode.children;
     let oldTreeLength = oldTree.length;
-    let newTreeLength = newTree.length;
-    if (newTreeLength === 0) {
-      for (let i = 0; i < oldTreeLength; i++) {
-        oldTree[i].tag !== TextString && onremove(oldTree[i]);
-      }
-      newVnode.dom.textContent = "";
-      return;
-    }
-    if (oldTreeLength && "key" in newTree[0].props && "key" in oldTree[0].props) {
+    current.vnode = newParentVnode;
+    current.oldVnode = oldParentVnode;
+    if (newTree[0] instanceof Vnode && oldTree[0] instanceof Vnode && "key" in newTree[0].props && "key" in oldTree[0].props) {
+      let newTreeLength2 = newTree.length;
       let oldKeyedList = {};
       for (let i = 0; i < oldTreeLength; i++) {
         oldKeyedList[oldTree[i].props.key] = i;
       }
       let newKeyedList = {};
-      for (let i = 0; i < newTreeLength; i++) {
+      for (let i = 0; i < newTreeLength2; i++) {
         newKeyedList[newTree[i].props.key] = i;
       }
-      for (let i = 0; i < newTreeLength; i++) {
+      for (let i = 0; i < newTreeLength2; i++) {
         let childVnode = newTree[i];
         let oldChildVnode = oldTree[oldKeyedList[childVnode.props.key]];
         let shouldPatch = true;
         if (oldChildVnode) {
           childVnode.dom = oldChildVnode.dom;
-          if ("v-once" in childVnode.props || childVnode.props.shouldupdate && childVnode.props.shouldupdate(childVnode, oldChildVnode) === false) {
+          if (childVnode.props["v-once"] || childVnode.props.shouldupdate && childVnode.props.shouldupdate(childVnode, oldChildVnode) === false) {
             childVnode.children = oldChildVnode.children;
             shouldPatch = false;
           } else {
@@ -590,102 +544,191 @@
           setAttributes(childVnode);
           childVnode.props.oncreate && childVnode.props.oncreate(childVnode);
         }
-        if (newVnode.dom.childNodes[i] === Und) {
-          newVnode.dom.appendChild(childVnode.dom);
-        } else if (newVnode.dom.childNodes[i] !== childVnode.dom) {
-          oldTree[i] && newKeyedList[oldTree[i].props.key] === Und && onremove(oldTree[i]);
-          newVnode.dom.replaceChild(childVnode.dom, newVnode.dom.childNodes[i]);
+        if (!newParentVnode.dom.childNodes[i]) {
+          newParentVnode.dom.appendChild(childVnode.dom);
+        } else if (newParentVnode.dom.childNodes[i] !== childVnode.dom) {
+          oldTree[i] && !newKeyedList[oldTree[i].props.key] && callRemove(oldTree[i]);
+          newParentVnode.dom.replaceChild(childVnode.dom, newParentVnode.dom.childNodes[i]);
         }
-        shouldPatch && patch(childVnode, oldChildVnode);
+        shouldPatch && v.patch(childVnode, oldChildVnode);
       }
-      for (let i = newTreeLength; i < oldTreeLength; i++) {
-        if (newKeyedList[oldTree[i].props.key] === Und) {
+      for (let i = newTreeLength2; i < oldTreeLength; i++) {
+        if (!newKeyedList[oldTree[i].props.key]) {
           let oldChildVnode = oldTree[i];
-          onremove(oldChildVnode);
+          callRemove(oldChildVnode);
           oldChildVnode.dom.parentNode && oldChildVnode.dom.parentNode.removeChild(oldChildVnode.dom);
         }
       }
       return;
     }
-    for (let i = 0; i < newTreeLength; i++) {
-      let newChildVnode = newTree[i];
-      if (i < oldTreeLength) {
-        let oldChildVnode = oldTree[i];
-        if (newChildVnode.tag === TextString) {
-          if (oldChildVnode.tag === TextString) {
-            newChildVnode.dom = oldChildVnode.dom;
-            if (newChildVnode.dom.nodeValue != newChildVnode.nodeValue) {
-              newChildVnode.dom.nodeValue = newChildVnode.nodeValue;
-            }
-            continue;
-          }
-          newChildVnode.dom = document.createTextNode(newChildVnode.nodeValue);
-          onremove(oldChildVnode);
-          newVnode.dom.replaceChild(newChildVnode.dom, oldChildVnode.dom);
+    for (let i = 0; i < newTree.length; i++) {
+      let childVnode = newTree[i];
+      if (childVnode instanceof Vnode) {
+        let oldChildVnode2 = oldTree[i];
+        childVnode.isSVG = newParentVnode.isSVG || childVnode.tag === "svg";
+        if (!oldChildVnode2) {
+          childVnode.dom = createDomElement(childVnode.tag, childVnode.isSVG);
+          setAttributes(childVnode);
+          childVnode.props.oncreate && childVnode.props.oncreate(childVnode);
+          v.patch(childVnode);
+          newParentVnode.dom.appendChild(childVnode.dom);
           continue;
         }
-        if (oldChildVnode.tag === newChildVnode.tag) {
-          newChildVnode.dom = oldChildVnode.dom;
-          if (newChildVnode.props["v-once"] || newChildVnode.props.shouldupdate && newChildVnode.props.shouldupdate(newChildVnode, oldChildVnode) === false) {
-            newChildVnode.children = oldChildVnode.children;
+        if (childVnode.tag === oldChildVnode2.tag) {
+          childVnode.dom = oldChildVnode2.dom;
+          if (childVnode.props["v-once"] || childVnode.props.shouldupdate && childVnode.props.shouldupdate(childVnode, oldChildVnode2) === false) {
+            childVnode.children = oldChildVnode2.children;
             continue;
           }
-          setAttributes(newChildVnode, oldChildVnode);
+          setAttributes(childVnode, oldChildVnode2);
           if (v.isMounted) {
-            newChildVnode.props.onupdate && newChildVnode.props.onupdate(newChildVnode, oldChildVnode);
+            childVnode.props.onupdate && childVnode.props.onupdate(childVnode, oldChildVnode2);
           } else {
-            newChildVnode.props.oncreate && newChildVnode.props.oncreate(newChildVnode);
+            childVnode.props.oncreate && childVnode.props.oncreate(childVnode);
           }
-          patch(newChildVnode, oldChildVnode);
+          v.patch(childVnode, oldChildVnode2);
           continue;
         }
-        newChildVnode.dom = createDomElement(newChildVnode.tag, newChildVnode.isSVG);
-        setAttributes(newChildVnode);
-        oldChildVnode.tag !== TextString && onremove(oldChildVnode);
-        newChildVnode.props.oncreate && newChildVnode.props.oncreate(newChildVnode);
-        newVnode.dom.replaceChild(newChildVnode.dom, oldChildVnode.dom);
-        patch(newChildVnode, emptyVnode);
+        childVnode.dom = createDomElement(childVnode.tag, childVnode.isSVG);
+        setAttributes(childVnode);
+        childVnode.props.oncreate && childVnode.props.oncreate(childVnode);
+        oldChildVnode2 instanceof Vnode && callRemove(oldChildVnode2);
+        newParentVnode.dom.replaceChild(childVnode.dom, oldChildVnode2.dom);
+        v.patch(childVnode);
         continue;
       }
-      if (newChildVnode.tag === TextString) {
-        newChildVnode.dom = document.createTextNode(newChildVnode.nodeValue);
-        newVnode.dom.appendChild(newChildVnode.dom);
+      if (childVnode === null || childVnode === void 0) {
+        newTree.splice(i--, 1);
         continue;
       }
-      newChildVnode.dom = createDomElement(newChildVnode.tag, newChildVnode.isSVG);
-      setAttributes(newChildVnode);
-      newVnode.dom.appendChild(newChildVnode.dom);
-      newChildVnode.props.oncreate && newChildVnode.props.oncreate(newChildVnode);
-      patch(newChildVnode, emptyVnode);
-    }
-    for (let i = newTreeLength; i < oldTreeLength; i++) {
+      if (Array.isArray(childVnode)) {
+        newTree.splice(i--, 1, ...childVnode);
+        continue;
+      }
+      if (childVnode instanceof VnodeComponent) {
+        current.component = childVnode.component;
+        newTree.splice(
+          i--,
+          1,
+          (childVnode.component.view ? childVnode.component.view.bind(childVnode.component) : childVnode.component.bind(childVnode.component))(
+            childVnode.props,
+            ...childVnode.children
+          )
+        );
+        continue;
+      }
+      if (childVnode instanceof VnodeText === false) {
+        newTree[i] = childVnode = new VnodeText(String(childVnode));
+      }
+      if (newTree[i - 1] instanceof VnodeText) {
+        newTree[i - 1].dom.nodeValue += childVnode.nodeValue;
+        newTree[i - 1].nodeValue += childVnode.nodeValue;
+        newTree.splice(i--, 1);
+        continue;
+      }
       let oldChildVnode = oldTree[i];
-      oldChildVnode.tag !== TextString && onremove(oldChildVnode);
-      oldChildVnode.dom.parentNode && oldChildVnode.dom.parentNode.removeChild(oldChildVnode.dom);
-    }
-  }
-  function directive(name, directive2) {
-    let fullName = `v-${name}`;
-    directives[fullName] = directive2;
-    reservedProps[fullName] = true;
-  }
-  function hideDirective(test) {
-    return (bool, vnode, oldVnode) => {
-      let value = test ? bool : !bool;
-      if (value) {
-        let newdom = document.createTextNode("");
-        if (oldVnode && oldVnode.dom && oldVnode.dom.parentNode) {
-          oldVnode.tag !== TextString && onremove(oldVnode);
-          oldVnode.dom.parentNode.replaceChild(newdom, oldVnode.dom);
-        }
-        vnode.tag = TextString;
-        vnode.children = [];
-        vnode.props = {};
-        vnode.dom = newdom;
-        return false;
+      if (!oldChildVnode) {
+        childVnode.dom = document.createTextNode(childVnode.nodeValue);
+        newParentVnode.dom.appendChild(childVnode.dom);
+        continue;
       }
-    };
-  }
+      if (oldChildVnode instanceof VnodeText) {
+        childVnode.dom = oldChildVnode.dom;
+        if (childVnode.nodeValue != childVnode.dom.nodeValue) {
+          childVnode.dom.nodeValue = childVnode.nodeValue;
+        }
+        continue;
+      }
+      childVnode.dom = document.createTextNode(childVnode.nodeValue);
+      callRemove(oldChildVnode);
+      newParentVnode.dom.replaceChild(childVnode.dom, oldChildVnode.dom);
+    }
+    let newTreeLength = newTree.length;
+    if (newTreeLength === 0) {
+      for (let i = oldTreeLength; i--; ) {
+        oldTree[i] instanceof Vnode && callRemove(oldTree[i]);
+      }
+      newParentVnode.dom.textContent = "";
+      return;
+    }
+    for (let i = oldTreeLength - 1; i >= newTreeLength; --i) {
+      oldTree[i] instanceof Vnode && callRemove(oldTree[i]);
+      oldTree[i].dom.parentNode && oldTree[i].dom.parentNode.removeChild(oldTree[i].dom);
+    }
+  };
+  v.update = () => {
+    if (v.mainVnode) {
+      onCleanupList.length && callCallbackList(onCleanupList);
+      let oldMainVnode = v.mainVnode;
+      let newMainVnode = new Vnode(oldMainVnode.tag, oldMainVnode.props, [
+        v.component instanceof VnodeComponent ? v.component : v(v.component, null)
+      ]);
+      newMainVnode.dom = oldMainVnode.dom;
+      newMainVnode.isSVG = oldMainVnode.isSVG;
+      v.mainVnode = newMainVnode;
+      v.patch(newMainVnode, oldMainVnode);
+      if (v.isMounted === false) {
+        onMountList.length && callCallbackList(onMountList);
+        v.isMounted = true;
+      } else {
+        onUpdateList.length && callCallbackList(onUpdateList);
+      }
+      if (v.isNodeJs) {
+        return newMainVnode.dom.innerHTML;
+      }
+    }
+  };
+  v.unmount = () => {
+    if (v.mainVnode) {
+      onCleanupList.length && callCallbackList(onCleanupList);
+      onUnmountList.length && callCallbackList(onUnmountList);
+      v.component = emptyComponent;
+      let result = v.update();
+      v.mainVnode = null;
+      v.component = null;
+      v.isMounted = false;
+      return result;
+    }
+  };
+  v.mount = (container, component) => {
+    if (v.isMounted) {
+      v.unmount();
+    }
+    let mainContainer;
+    if (v.isNodeJs) {
+      mainContainer = typeof container === "string" ? createDomElement(container, container === "svg") : container;
+    } else {
+      mainContainer = typeof container === "string" ? document.querySelectorAll(container)[0] : container;
+    }
+    v.mainVnode = domToVnode(mainContainer);
+    v.mainVnode.isSVG = v.mainVnode.tag === "svg";
+    v.component = component;
+    return v.update();
+  };
+  var plugins = /* @__PURE__ */ new Map();
+  v.use = (plugin, options) => {
+    if (plugins.has(plugin)) {
+      return plugins.get(plugin);
+    }
+    let result = plugin(v, options);
+    plugins.set(plugin, result);
+    return result;
+  };
+  var hideDirective = (test) => (bool, vnode, oldnode) => {
+    let value = test ? bool : !bool;
+    if (value) {
+      let newdom = document.createTextNode("");
+      if (oldnode && oldnode.dom && oldnode.dom.parentNode) {
+        oldnode instanceof Vnode && callRemove(oldnode);
+        oldnode.dom.parentNode.replaceChild(newdom, oldnode.dom);
+      }
+      vnode.tag = "#text";
+      vnode.children = [];
+      vnode.props = {};
+      vnode.dom = newdom;
+      return false;
+    }
+  };
   var directives = {
     "v-if": hideDirective(false),
     "v-unless": hideDirective(true),
@@ -701,7 +744,7 @@
       }
     },
     "v-html": (html, vnode) => {
-      vnode.children = [trust(html)];
+      vnode.children = [v.trust(html)];
     },
     "v-model": ([model, property, event], vnode, oldVnode) => {
       let value;
@@ -788,45 +831,19 @@
       }
     }
   };
-  var plugins = /* @__PURE__ */ new Map();
-  function use(plugin, options) {
-    if (plugins.has(plugin)) {
-      return plugins.get(plugin);
-    }
-    let result = plugin(v, options);
-    plugins.set(plugin, result);
-    return result;
-  }
-  var v = function v2(tagOrComponent, props, ...children) {
-    if (typeof tagOrComponent === "string") {
-      return new Vnode(tagOrComponent, props || {}, children);
-    }
-    const vnode = new Vnode("__component__", props || {}, children);
-    vnode.component = tagOrComponent;
-    return vnode;
+  v.directive = (name, directive) => {
+    let fullName = `v-${name}`;
+    directives[fullName] = directive;
+    reservedProps[fullName] = true;
   };
-  v.fragment = (props, ...children) => {
-    return children;
-  };
-  v.current = current;
+  v.isNodeJs = Boolean(typeof process !== "undefined" && process.versions && process.versions.node);
+  v.isMounted = false;
+  v.component = null;
+  v.mainVnode = null;
   v.directives = directives;
   v.reservedProps = reservedProps;
-  v.isVnode = isVnode;
-  v.isComponent = isComponent;
-  v.isVnodeComponent = isVnodeComponent;
-  v.isMounted = false;
-  v.isNodeJs = isNodeJs;
-  v.trust = trust;
-  v.onCleanup = onCleanup;
-  v.onUnmount = onUnmount;
-  v.onMount = onMount;
-  v.onUpdate = onUpdate;
-  v.mount = mount;
-  v.unmount = unmount;
-  v.update = update;
+  v.current = current;
   v.setAttribute = setAttribute;
-  v.directive = directive;
-  v.use = use;
   var lib_default = v;
 
   // app/business-logic/btc.svg.tsx
@@ -1276,7 +1293,8 @@
       currency,
       algorithm,
       poolFee,
-      customPrice
+      customPrice,
+      customDailyMined
     }) {
       let coins = await this.getCoinsData();
       let pricesForAllCoins = await this.getPrices();
@@ -1293,10 +1311,15 @@
       let currencyLowerCased = (currency || "usd").toLowerCase();
       let realPrice = pricesForAllCoins[CryptoCurrencies[coinSymbol].id][currencyLowerCased] || pricesForAllCoins[CryptoCurrencies[coinSymbol].id].usd;
       let coinPrice = customPrice || realPrice;
-      const coinRewardPerDayMined = coin.reward * hashRate * 24;
-      const dailyMinedFee = coinRewardPerDayMined * poolFee;
-      const rewardWithoutFee = coinRewardPerDayMined - dailyMinedFee;
-      const dailyMined = rewardWithoutFee;
+      let coinRewardPerDayMined = coin.reward * hashRate * 24;
+      let dailyMinedFee = coinRewardPerDayMined * poolFee;
+      let dailyMined = coinRewardPerDayMined - dailyMinedFee;
+      if (customDailyMined) {
+        dailyMined = customDailyMined;
+        let intPoolFee = poolFee * 100;
+        dailyMinedFee = dailyMined / (100 - intPoolFee) * intPoolFee;
+        coinRewardPerDayMined = dailyMined + dailyMinedFee;
+      }
       const dailyIncome = dailyMined * coinPrice;
       const dailyIncomeFee = dailyMinedFee * coinPrice;
       const dailyPowerCost = powerCost / 1e3 * power * 24;
@@ -1403,13 +1426,15 @@
     poolFee: 1
   };
   var Store = {
+    loading: true,
     currency: DefaultCurrency,
     coin: DefaultCoin,
     formToShow: "manualConfig" /* manualConfig */,
     config: {
       powerCost: DefaultConfig.powerCost,
       poolFee: DefaultConfig.poolFee,
-      customPrice: 0,
+      customPrice: null,
+      customDailyMined: null,
       BTC: { ...CryptoCurrencies.BTC.config },
       ETH: { ...CryptoCurrencies.ETH.config },
       ETC: { ...CryptoCurrencies.ETC.config },
@@ -1428,10 +1453,7 @@
       "v-class": {
         active: Store.coin.symbol === key
       },
-      onclick: () => {
-        Store.coin = CryptoCurrencies[key];
-        Store.config.customPrice = null;
-      }
+      onclick: () => Store.coin = CryptoCurrencies[key]
     }, key));
   }
   function CurrencyNav() {
@@ -1442,10 +1464,7 @@
       "v-class": {
         active: Store.currency === key
       },
-      onclick: () => {
-        Store.currency = key;
-        Store.config.customPrice = null;
-      }
+      onclick: () => Store.currency = key
     }, key));
   }
   function CoinDescription() {
@@ -1480,31 +1499,23 @@
     }, /* @__PURE__ */ lib_default("fieldset", null, /* @__PURE__ */ lib_default("legend", null, "Hash Power"), /* @__PURE__ */ lib_default("input", {
       type: "number",
       placeholder: "Hash power",
-      "v-model": [Store.config[Store.coin.symbol], "hashRateAmount"],
-      onkeyup: lib_default.update
+      "v-model": [Store.config[Store.coin.symbol], "hashRateAmount"]
     })), /* @__PURE__ */ lib_default("fieldset", {
       class: "hash-power"
     }, /* @__PURE__ */ lib_default("legend", null, "\xA0"), /* @__PURE__ */ lib_default("select", {
-      value: Store.config[Store.coin.symbol].hashRateType,
-      onchange: (e) => {
-        Store.config[Store.coin.symbol].hashRateType = e.target.value;
-        lib_default.update();
-      }
+      "v-model": [Store.config[Store.coin.symbol], "hashRateType"]
     }, /* @__PURE__ */ lib_default("option", null, "Ph/s"), /* @__PURE__ */ lib_default("option", null, "Th/s"), /* @__PURE__ */ lib_default("option", null, "Gh/s"), /* @__PURE__ */ lib_default("option", null, "Mh/s"), /* @__PURE__ */ lib_default("option", null, "Kh/s"), /* @__PURE__ */ lib_default("option", null, "H/s")))), /* @__PURE__ */ lib_default("fieldset", null, /* @__PURE__ */ lib_default("legend", null, "Power Consumption (W)"), /* @__PURE__ */ lib_default("input", {
       type: "number",
       placeholder: "Power Consumption (W)",
-      "v-model": [Store.config[Store.coin.symbol], "power"],
-      onkeyup: lib_default.update
+      "v-model": [Store.config[Store.coin.symbol], "power"]
     })), /* @__PURE__ */ lib_default("fieldset", null, /* @__PURE__ */ lib_default("legend", null, "Power Cost Kw/h ($)"), /* @__PURE__ */ lib_default("input", {
       type: "number",
       placeholder: "Power Cost Kw/h ($)",
-      "v-model": [Store.config, "powerCost"],
-      onkeyup: lib_default.update
+      "v-model": [Store.config, "powerCost"]
     })), /* @__PURE__ */ lib_default("fieldset", null, /* @__PURE__ */ lib_default("legend", null, "Pool fee (%)"), /* @__PURE__ */ lib_default("input", {
       type: "number",
       placeholder: "Pool fee (%)",
-      "v-model": [Store.config, "poolFee"],
-      onkeyup: lib_default.update
+      "v-model": [Store.config, "poolFee"]
     })))));
   }
   function ConfigSection() {
@@ -1522,22 +1533,30 @@
       }
     }, "Manual")), /* @__PURE__ */ lib_default("section", null, /* @__PURE__ */ lib_default(MinerSelect, null), /* @__PURE__ */ lib_default(ManualConfig, null)));
   }
-  var ResultByEnum = /* @__PURE__ */ ((ResultByEnum2) => {
-    ResultByEnum2["daily"] = "Day";
-    ResultByEnum2["weekly"] = "Week";
-    ResultByEnum2["monthly"] = "Month";
-    ResultByEnum2["yearly"] = "Year";
-    return ResultByEnum2;
-  })(ResultByEnum || {});
+  var ResultByStringEnum = /* @__PURE__ */ ((ResultByStringEnum2) => {
+    ResultByStringEnum2["daily"] = "Day";
+    ResultByStringEnum2["weekly"] = "Week";
+    ResultByStringEnum2["monthly"] = "Month";
+    ResultByStringEnum2["yearly"] = "Year";
+    return ResultByStringEnum2;
+  })(ResultByStringEnum || {});
   function ResultBy({ by }) {
     let result = Store.result[by];
-    let byString = ResultByEnum[by];
+    let byString = ResultByStringEnum[by];
     if (result === void 0) {
       return /* @__PURE__ */ lib_default("tr", null, /* @__PURE__ */ lib_default("td", {
         colspan: "4"
       }, " - "));
     }
-    return /* @__PURE__ */ lib_default("tr", null, /* @__PURE__ */ lib_default("td", null, /* @__PURE__ */ lib_default("small", null, "Mined/", byString), /* @__PURE__ */ lib_default("b", {
+    let decimalPlacesString = Store.config.customDailyMined >= 1 ? 5 : 5e-6;
+    return /* @__PURE__ */ lib_default("tr", null, /* @__PURE__ */ lib_default("td", null, /* @__PURE__ */ lib_default("small", null, "Mined/", byString), /* @__PURE__ */ lib_default("input", {
+      "v-if": by === "daily" /* daily */,
+      type: "number",
+      "v-model": [Store.config, "customDailyMined"],
+      step: decimalPlacesString,
+      class: "u-m-0"
+    }), /* @__PURE__ */ lib_default("b", {
+      "v-if": by !== "daily" /* daily */,
       "v-format-number": {
         currency: Store.currency,
         decimalPlaces: 6
@@ -1555,7 +1574,7 @@
     }, result.profit)));
   }
   function Results() {
-    if (Store.result.daily === void 0) {
+    if (Store.loading) {
       return /* @__PURE__ */ lib_default("div", null, "Loading...");
     }
     return /* @__PURE__ */ lib_default("tr", {
@@ -1578,19 +1597,23 @@
   }
   var calculatorService = new CalculatorService();
   async function computeProfit() {
-    console.log("Computing profit...");
     if (Store.config[Store.coin.symbol] === void 0 || Store.config[Store.coin.symbol].hashRateAmount === void 0) {
       return;
     }
+    Store.loading = true;
     if (Store.config.powerCost === void 0) {
       Store.config.powerCost === 0;
     }
     if (Store.config.poolFee === void 0) {
       Store.config.poolFee === 0;
     }
-    const hashRate = calculatorService.getHashRateFromString(Store.config[Store.coin.symbol].hashRateType, Store.config[Store.coin.symbol].hashRateAmount);
+    const hashRate = calculatorService.getHashRateFromString(
+      Store.config[Store.coin.symbol].hashRateType,
+      Store.config[Store.coin.symbol].hashRateAmount
+    );
     let results = await calculatorService.calculateCoinForHashRate({
       customPrice: Store.config.customPrice,
+      customDailyMined: Store.config.customDailyMined,
       coinSymbol: CoinSymbolEnum[Store.coin.symbol],
       hashRate,
       power: Store.config[Store.coin.symbol].power,
@@ -1600,11 +1623,33 @@
     });
     Store.result = results;
     Store.config.customPrice = results.price;
-    console.log("Done computing profit.");
+    Store.config.customDailyMined = results.daily.mined;
+    Store.loading = false;
     lib_default.update();
   }
   function App() {
-    (0, import_hooks.useCallback)(() => computeProfit(), [
+    let ref = (0, import_hooks.useRef)(null);
+    (0, import_hooks.useEffect)(() => {
+      Store.config.customPrice = null;
+    }, [Store.coin.symbol, Store.currency]);
+    (0, import_hooks.useEffect)(() => {
+      Store.config.customDailyMined = null;
+    }, [
+      Store.coin.symbol,
+      Store.currency,
+      Store.config[Store.coin.symbol].hashRateAmount,
+      Store.config[Store.coin.symbol].hashRateType,
+      Store.config[Store.coin.symbol].power,
+      Store.config.powerCost,
+      Store.config.poolFee
+    ]);
+    (0, import_hooks.useEffect)(computeProfit, []);
+    (0, import_hooks.useEffect)(() => {
+      if (ref.current) {
+        computeProfit();
+      }
+    }, [
+      Store.config.customDailyMined,
       Store.config.customPrice,
       Store.coin.symbol,
       Store.currency,
@@ -1617,7 +1662,8 @@
     return [
       /* @__PURE__ */ lib_default(CoinNav, null),
       /* @__PURE__ */ lib_default("article", {
-        class: "flex"
+        class: "flex",
+        "v-ref": ref
       }, /* @__PURE__ */ lib_default(CurrencyNav, null), /* @__PURE__ */ lib_default("section", {
         class: "coin-container flex flex-1"
       }, /* @__PURE__ */ lib_default("div", {

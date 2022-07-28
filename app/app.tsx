@@ -6,7 +6,7 @@ import {
   CryptoCurrencies,
   CurrencyEnum
 } from "./business-logic/crypto-calculator-service";
-import hooksPlugin, { useCallback } from "valyrian.js/plugins/hooks";
+import hooksPlugin, { useEffect, useRef } from "valyrian.js/plugins/hooks";
 
 import v from "valyrian.js/lib";
 
@@ -27,13 +27,15 @@ const DefaultConfig = {
 };
 
 const Store = {
+  loading: true,
   currency: DefaultCurrency,
   coin: DefaultCoin,
   formToShow: FormToShow.manualConfig,
   config: {
     powerCost: DefaultConfig.powerCost,
     poolFee: DefaultConfig.poolFee,
-    customPrice: 0,
+    customPrice: null,
+    customDailyMined: null,
     BTC: { ...CryptoCurrencies.BTC.config },
     ETH: { ...CryptoCurrencies.ETH.config },
     ETC: { ...CryptoCurrencies.ETC.config },
@@ -53,10 +55,7 @@ function CoinNav() {
           v-class={{
             active: Store.coin.symbol === key
           }}
-          onclick={() => {
-            Store.coin = CryptoCurrencies[key];
-            Store.config.customPrice = null;
-          }}
+          onclick={() => (Store.coin = CryptoCurrencies[key])}
         >
           {key}
         </button>
@@ -73,10 +72,7 @@ function CurrencyNav() {
           v-class={{
             active: Store.currency === key
           }}
-          onclick={() => {
-            Store.currency = key;
-            Store.config.customPrice = null;
-          }}
+          onclick={() => (Store.currency = key)}
         >
           {key}
         </button>
@@ -118,18 +114,11 @@ function ManualConfig() {
                 type="number"
                 placeholder="Hash power"
                 v-model={[Store.config[Store.coin.symbol], "hashRateAmount"]}
-                onkeyup={v.update}
               />
             </fieldset>
             <fieldset class="hash-power">
               <legend>&nbsp;</legend>
-              <select
-                value={Store.config[Store.coin.symbol].hashRateType}
-                onchange={(e) => {
-                  Store.config[Store.coin.symbol].hashRateType = e.target.value;
-                  v.update();
-                }}
-              >
+              <select v-model={[Store.config[Store.coin.symbol], "hashRateType"]}>
                 <option>Ph/s</option>
                 <option>Th/s</option>
                 <option>Gh/s</option>
@@ -145,21 +134,15 @@ function ManualConfig() {
               type="number"
               placeholder="Power Consumption (W)"
               v-model={[Store.config[Store.coin.symbol], "power"]}
-              onkeyup={v.update}
             />
           </fieldset>
           <fieldset>
             <legend>Power Cost Kw/h ($)</legend>
-            <input
-              type="number"
-              placeholder="Power Cost Kw/h ($)"
-              v-model={[Store.config, "powerCost"]}
-              onkeyup={v.update}
-            />
+            <input type="number" placeholder="Power Cost Kw/h ($)" v-model={[Store.config, "powerCost"]} />
           </fieldset>
           <fieldset>
             <legend>Pool fee (%)</legend>
-            <input type="number" placeholder="Pool fee (%)" v-model={[Store.config, "poolFee"]} onkeyup={v.update} />
+            <input type="number" placeholder="Pool fee (%)" v-model={[Store.config, "poolFee"]} />
           </fieldset>
         </section>
       </form>
@@ -194,16 +177,23 @@ function ConfigSection() {
   );
 }
 
-enum ResultByEnum {
+enum ResultByStringEnum {
   "daily" = "Day",
   "weekly" = "Week",
   "monthly" = "Month",
   "yearly" = "Year"
 }
 
+enum ResultByEnum {
+  "daily" = "daily",
+  "weekly" = "weekly",
+  "monthly" = "monthly",
+  "yearly" = "yearly"
+}
+
 function ResultBy({ by }: { by: string }) {
   let result = Store.result[by] as CalculationResult;
-  let byString = ResultByEnum[by];
+  let byString = ResultByStringEnum[by];
   if (result === undefined) {
     return (
       <tr>
@@ -212,11 +202,21 @@ function ResultBy({ by }: { by: string }) {
     );
   }
 
+  let decimalPlacesString = Store.config.customDailyMined >= 1 ? 5 : 0.000005;
+
   return (
     <tr>
       <td>
         <small>Mined/{byString}</small>
+        <input
+          v-if={by === ResultByEnum.daily}
+          type="number"
+          v-model={[Store.config, "customDailyMined"]}
+          step={decimalPlacesString}
+          class="u-m-0"
+        />
         <b
+          v-if={by !== ResultByEnum.daily}
           v-format-number={{
             currency: Store.currency,
             decimalPlaces: 6
@@ -248,7 +248,7 @@ function ResultBy({ by }: { by: string }) {
 }
 
 function Results() {
-  if (Store.result.daily === undefined) {
+  if (Store.loading) {
     return <div>Loading...</div>;
   }
 
@@ -289,10 +289,11 @@ function Results() {
 const calculatorService = new CalculatorService();
 
 async function computeProfit() {
-  console.log("Computing profit...");
   if (Store.config[Store.coin.symbol] === undefined || Store.config[Store.coin.symbol].hashRateAmount === undefined) {
     return;
   }
+
+  Store.loading = true;
 
   if (Store.config.powerCost === undefined) {
     Store.config.powerCost === 0;
@@ -308,6 +309,7 @@ async function computeProfit() {
 
   let results = await calculatorService.calculateCoinForHashRate({
     customPrice: Store.config.customPrice,
+    customDailyMined: Store.config.customDailyMined,
     coinSymbol: CoinSymbolEnum[Store.coin.symbol],
     hashRate,
     power: Store.config[Store.coin.symbol].power,
@@ -318,27 +320,56 @@ async function computeProfit() {
 
   Store.result = results;
   Store.config.customPrice = results.price;
-  console.log("Done computing profit.");
+  Store.config.customDailyMined = results.daily.mined;
+
+  Store.loading = false;
   v.update();
 }
 
 export function App() {
-  useCallback(
-    () => computeProfit(),
-    [
-      Store.config.customPrice,
-      Store.coin.symbol,
-      Store.currency,
-      Store.config[Store.coin.symbol].hashRateAmount,
-      Store.config[Store.coin.symbol].hashRateType,
-      Store.config[Store.coin.symbol].power,
-      Store.config.powerCost,
-      Store.config.poolFee
-    ]
-  );
+  let ref = useRef<Element>(null);
+
+  // Reset the custom price when the coin or currency changes
+  useEffect(() => {
+    Store.config.customPrice = null;
+  }, [Store.coin.symbol, Store.currency]);
+
+  // Reset the custom daily mined when the config changes
+  useEffect(() => {
+    Store.config.customDailyMined = null;
+  }, [
+    Store.coin.symbol,
+    Store.currency,
+    Store.config[Store.coin.symbol].hashRateAmount,
+    Store.config[Store.coin.symbol].hashRateType,
+    Store.config[Store.coin.symbol].power,
+    Store.config.powerCost,
+    Store.config.poolFee
+  ]);
+
+  // Compute profit only in the first render
+  useEffect(computeProfit, []);
+
+  // Compute profit on every change
+  useEffect(() => {
+    if (ref.current) {
+      computeProfit();
+    }
+  }, [
+    Store.config.customDailyMined,
+    Store.config.customPrice,
+    Store.coin.symbol,
+    Store.currency,
+    Store.config[Store.coin.symbol].hashRateAmount,
+    Store.config[Store.coin.symbol].hashRateType,
+    Store.config[Store.coin.symbol].power,
+    Store.config.powerCost,
+    Store.config.poolFee
+  ]);
+
   return [
     <CoinNav />,
-    <article class="flex">
+    <article class="flex" v-ref={ref}>
       <CurrencyNav />
       <section class="coin-container flex flex-1">
         <div class="coin-description">
