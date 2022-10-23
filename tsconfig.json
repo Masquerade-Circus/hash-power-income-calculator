@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "jsx": "preserve",
-    "target": "ES2021",
-    "moduleResolution": "node",
+    "jsx": "react",
+    "target": "ES2022",
+    "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "allowJs": true,

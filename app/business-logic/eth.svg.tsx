@@ -1,4 +1,4 @@
-import v from "valyrian.js/lib";
+import { v } from "valyrian.js";
 
 export function EthSVG() {
   return (

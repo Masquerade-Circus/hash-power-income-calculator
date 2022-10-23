@@ -1,6 +1,6 @@
 // Format money with currency symbol and decimal precision (2) using the Intl.NumberFormat API
 
-import { Directive, IVnode, Valyrian } from "valyrian.js/lib/interfaces";
+import { Directive, IVnode, Valyrian } from "valyrian.js/interfaces";
 
 enum CurrencyToLanguageEnum {
   "USD" = "en-US",

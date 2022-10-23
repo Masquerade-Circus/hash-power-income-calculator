@@ -6,14 +6,12 @@ import {
   CryptoCurrencies,
   CurrencyEnum
 } from "./business-logic/crypto-calculator-service";
-import hooksPlugin, { useEffect, useRef } from "valyrian.js/plugins/hooks";
-
-import v from "valyrian.js/lib";
-
-v.use(hooksPlugin);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { update, v } from "valyrian.js";
+import { useEffect, useRef } from "valyrian.js/hooks";
 
 const DefaultCurrency = CurrencyEnum.USD;
-const DefaultCoin = CryptoCurrencies.ETH;
+const DefaultCoin = CryptoCurrencies.BTC;
 const AllowSelectMiner = false;
 
 enum FormToShow {
@@ -37,7 +35,6 @@ const Store = {
     customPrice: null,
     customDailyMined: null,
     BTC: { ...CryptoCurrencies.BTC.config },
-    ETH: { ...CryptoCurrencies.ETH.config },
     ETC: { ...CryptoCurrencies.ETC.config },
     LTC: { ...CryptoCurrencies.LTC.config },
     XMR: { ...CryptoCurrencies.XMR.config },
@@ -323,11 +320,11 @@ async function computeProfit() {
   Store.config.customDailyMined = results.daily.mined;
 
   Store.loading = false;
-  v.update();
+  update();
 }
 
 export function App() {
-  let ref = useRef<Element>(null);
+  let ref = useRef(null);
 
   // Reset the custom price when the coin or currency changes
   useEffect(() => {

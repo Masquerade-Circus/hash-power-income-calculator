@@ -3,19 +3,19 @@ import { DashSVG } from "./dash.svg";
 import { EtcSVG } from "./etc.svg";
 import { EthSVG } from "./eth.svg";
 import { LtcSVG } from "./ltc.svg";
-// We will create a hash power calculator for cryptocurrencies and mining hardward.
-// We will use the coingecko-api and minerstats-api.
-import Request from "valyrian.js/plugins/request.js";
 import { XmrSVG } from "./xmr.svg";
 import { ZecSVG } from "./zec.svg";
+// We will create a hash power calculator for cryptocurrencies and mining hardward.
+// We will use the coingecko-api and minerstats-api.
+import { request } from "valyrian.js/request";
 import { storageService } from "../common/storage-service";
 
-const CoinGeckoRequest = Request.new("https://api.coingecko.com/api/v3", {
-  methods: ["get"]
+const CoinGeckoRequest = request.new("https://api.coingecko.com/api/v3", {
+  allowedMethods: ["get"]
 });
 
-const MinerstatRequest = Request.new("https://api.minerstat.com/v2/coins", {
-  methods: ["get"]
+const MinerstatRequest = request.new("https://api.minerstat.com/v2/coins", {
+  allowedMethods: ["get"]
 });
 
 const ThirtyMinutesInMilliSeconds = 1000 * 60 * 30;
@@ -34,7 +34,6 @@ export enum AlgorithmsEnum {
 
 export enum CoinSymbolEnum {
   "BTC" = "BTC",
-  "ETH" = "ETH",
   "ETC" = "ETC",
   "XMR" = "XMR",
   "ZEC" = "ZEC",
@@ -44,7 +43,6 @@ export enum CoinSymbolEnum {
 
 enum CoinNamesEnum {
   "Bitcoin" = "Bitcoin",
-  "Ethereum" = "Ethereum",
   "Ethereum Classic" = "Ethereum Classic",
   "Monero" = "Monero",
   "Zcash" = "Zcash",
@@ -80,7 +78,6 @@ interface PriceItemInterface {
 interface PricesInterface {
   bitcoin: PriceItemInterface;
   dash: PriceItemInterface;
-  ethereum: PriceItemInterface;
   "ethereum-classic": PriceItemInterface;
   litecoin: PriceItemInterface;
   monero: PriceItemInterface;
@@ -119,17 +116,6 @@ export const CryptoCurrencies = {
       hashRateAmount: 40,
       hashRateType: "Th/s",
       power: 2600
-    }
-  },
-  ETH: {
-    id: "ethereum",
-    symbol: "ETH",
-    name: "Ethereum",
-    icon: EthSVG(),
-    config: {
-      hashRateAmount: 200,
-      hashRateType: "Mh/s",
-      power: 140
     }
   },
   ETC: {
@@ -189,7 +175,7 @@ export const CryptoCurrencies = {
   }
 };
 
-const CryptoCurrenciesIds = ["bitcoin", "ethereum", "ethereum-classic", "monero", "zcash", "dash", "litecoin"];
+const CryptoCurrenciesIds = ["bitcoin", "ethereum-classic", "monero", "zcash", "dash", "litecoin"];
 
 export enum CurrencyEnum {
   "USD" = "USD",
