@@ -20,8 +20,8 @@ enum FormToShow {
 }
 
 const DefaultConfig = {
-  powerCost: 0.1,
-  poolFee: 1
+  powerCost: 0.12,
+  poolFee: 2
 };
 
 const Store = {
@@ -121,7 +121,7 @@ function ManualConfig() {
                 <option>Gh/s</option>
                 <option>Mh/s</option>
                 <option>Kh/s</option>
-                <option>H/s</option>
+                <option>h/s</option>
               </select>
             </fieldset>
           </div>
@@ -254,21 +254,15 @@ function Results() {
       <td colspan="2">
         <dl>
           <dt>
-            <dd>
-              Cost by <span class="text-sm">{Store.coin.name}</span> mined
-            </dd>
-            <dd>
-              <b v-format-money={Store.currency}>{Store.result.costPerMinedCoin}</b>
-            </dd>
-          </dt>
-          <dt>
-            <dd>Electricity BreakEven</dd>
+            <dd>Electricity BreakEven ({Store.currency}/kWh)</dd>
             <dd>
               <b v-format-money={Store.currency}>{Store.result.electricityPriceBreakEven}</b>
             </dd>
           </dt>
           <dt>
-            <dd>Hashprice</dd>
+            <dd>
+              Hashprice ({Store.currency}/{Store.config[Store.coin.symbol].hashRateType}/Day)
+            </dd>
             <dd>
               <b v-format-money={Store.currency}>{Store.result.hashPrice}</b>
             </dd>
@@ -276,8 +270,10 @@ function Results() {
         </dl>
       </td>
       <td colspan="2">
-        <b>Profit by month</b>
-        <b v-format-money={Store.currency}>{Store.result.monthly.profit}</b>
+        <b>
+          Cost by <span class="text-sm">{Store.coin.name}</span> mined
+        </b>
+        <b v-format-money={Store.currency}>{Store.result.costPerMinedCoin}</b>
       </td>
     </tr>
   );
@@ -309,6 +305,7 @@ async function computeProfit() {
     customDailyMined: Store.config.customDailyMined,
     coinSymbol: CoinSymbolEnum[Store.coin.symbol],
     hashRate,
+    hashRateType: Store.config[Store.coin.symbol].hashRateType,
     power: Store.config[Store.coin.symbol].power,
     powerCost: Store.config.powerCost,
     currency: Store.currency,
@@ -317,7 +314,7 @@ async function computeProfit() {
 
   Store.result = results;
   Store.config.customPrice = results.price;
-  Store.config.customDailyMined = results.daily.mined;
+  Store.config.customDailyMined = Number(Number(results.daily.mined).toFixed(8));
 
   Store.loading = false;
   update();

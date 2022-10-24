@@ -1,7 +1,6 @@
 import { BtcSVG } from "./btc.svg";
 import { DashSVG } from "./dash.svg";
 import { EtcSVG } from "./etc.svg";
-import { EthSVG } from "./eth.svg";
 import { LtcSVG } from "./ltc.svg";
 import { XmrSVG } from "./xmr.svg";
 import { ZecSVG } from "./zec.svg";
@@ -115,7 +114,7 @@ export const CryptoCurrencies = {
     config: {
       hashRateAmount: 40,
       hashRateType: "Th/s",
-      power: 2600
+      power: 1500
     }
   },
   ETC: {
@@ -282,6 +281,7 @@ export class CalculatorService {
   async calculateCoinForHashRate({
     coinSymbol,
     hashRate,
+    hashRateType,
     power,
     powerCost,
     currency,
@@ -294,6 +294,7 @@ export class CalculatorService {
     customDailyMined: number;
     coinSymbol: CoinSymbolEnum;
     hashRate: number;
+    hashRateType: string;
     power: number;
     powerCost: number;
     currency: string;
@@ -322,6 +323,7 @@ export class CalculatorService {
     let realPrice =
       pricesForAllCoins[CryptoCurrencies[coinSymbol].id][currencyLowerCased] ||
       pricesForAllCoins[CryptoCurrencies[coinSymbol].id].usd;
+
     let coinPrice = customPrice || realPrice;
 
     let coinRewardPerDayMined = coin.reward * hashRate * 24;
@@ -341,8 +343,8 @@ export class CalculatorService {
     const dailyProfit = dailyIncome - dailyPowerCost;
 
     const costPerMinedCoin = (dailyPowerCost + dailyIncomeFee) / dailyMined;
-    const electricityPriceBreakEven = ((dailyMined * coinPrice * 1000) / power) * 24;
-    const hashPrice = coinRewardPerDayMined * coinPrice;
+    const electricityPriceBreakEven = ((dailyMined - dailyMinedFee) * coinPrice) / dailyPowerCost;
+    const hashPrice = (coinRewardPerDayMined / (hashRate / HashRateStringToNumber[hashRateType])) * coinPrice;
 
     return {
       daily: {
